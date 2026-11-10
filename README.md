@@ -1,0 +1,117 @@
+# Gokostats
+
+**English** · [Türkçe](README.tr.md)
+
+A football statistics web app: team and player trends, form leaderboards, head-to-head records, side-by-side team comparison and match analysis for 90+ competitions (leagues, domestic cups, continental and national-team tournaments), all built from recent match history.
+
+<!-- Screenshots: put images in docs/screenshots/ and uncomment
+![Player page](docs/screenshots/player.png)
+![Compare](docs/screenshots/compare.png)
+![Match detail](docs/screenshots/match.png)
+-->
+
+## Features
+
+- **Daily match list**: tracked leagues sorted by popularity, with a date picker.
+- **Match detail**: scoreboard, full-time and half-by-half match stats, standout trends, a score prediction model, head-to-head card (all / home / away, last 5/10/20/all), team trend cards with match-by-match evidence, and player cards for both line-ups.
+- **Trends**: every match of the day where both teams' recent record clears a threshold (e.g. *both teams scored in 14 of the last 20*, *10+ corners*, *player 3+ shots*). You can filter by trend and sort by rate, kick-off or match.
+- **Team page**: goals, corners, shots, cards and fouls over the last 5/10/20 matches, filterable by venue, competition and half, as a list or a bar chart with an adjustable line. Also a player grid for the squad.
+- **Player page**: profile, running streaks (*scored in 5 straight*), season summary (totals, per match, per 90, average rating), standout traits with the per-match value, opponent and minutes, detailed stats (passes, key passes, duels, aerials, dribbles, offsides, xG/xA, saves…), a match-by-match chart for any stat, and a full match log.
+- **Search**: autocomplete for teams and players in the header (keyboard accessible), plus a results page.
+- **Compare**: pick any two teams to see form, per-match averages, match-trend rates and head-to-head.
+- **Leaderboards**: current-season leaders in ~30 categories (goals, assists, shots, xG, key passes, passes, duels, aerials, tackles, interceptions, offsides, cards, saves, rating…), ranked by total, per match or per 90 (with a minimum-matches rule), across all leagues or for one league.
+- Responsive (mobile / tablet / desktop), dark theme.
+
+## How it works
+
+```
+BSD API ──► sync scripts ──► PostgreSQL (Prisma) ──► analysis engine ──► Next.js pages
+            (GitHub Actions cron)                    (pure functions,      (server components)
+                                                      unit tested)
+```
+
+- **Sample rule:** a team's last N matches (default 20) in the same competition type within the last two seasons, either all venues or home/away only. Players use their last N **starts** (from the line-up, or 60+ minutes when the line-up is unknown).
+- **Trend highlight:** a trend stands out when the hit rate clears its threshold for the deciding record(s). Within a ladder (e.g. 10+ / 11+ / 12+ corners) only the highest passing line is shown. Definitions live in [`src/lib/trend-config.ts`](src/lib/trend-config.ts).
+- **Card counting:** yellow = 1, red = 2. A second-yellow dismissal counts as 3 in total.
+- **Score prediction:** a Poisson regression trained on about 25k matches (Elo gap, opponent-adjusted goals, recent form, rest days, head-to-head) with a Dixon–Coles correction. It falls back to a classic opponent-adjusted Poisson model when there isn't enough data.
+
+## Tech stack
+
+Next.js 16 (App Router, server components) · React 19 · TypeScript · Tailwind CSS 4 + shadcn/ui · Prisma 7 · PostgreSQL · Vitest · Playwright · GitHub Actions · Vercel
+
+Data source: [Bzzoiro Sports Data](https://sports.bzzoiro.com) API.
+
+## Project structure
+
+```
+src/app/            pages (matches, trends, kings, teams/[id], players/[id], compare, search) and /api/search
+src/components/     UI components (charts, cards, search box…)
+src/lib/engine/     pure analysis functions + unit tests (no DB access)
+src/lib/            data loaders (Prisma) that feed the engine
+scripts/            BSD sync jobs and the score-model training script
+prisma/             schema, migrations, league seed
+e2e/                Playwright end-to-end tests
+```
+
+## Getting started
+
+Requirements: Node.js 20+, PostgreSQL, a BSD API token.
+
+```bash
+npm install
+cp .env.example .env          # fill in DATABASE_URL and BSD_API_TOKEN
+npx prisma migrate deploy
+npm run db:seed               # tracked leagues
+npm run sync:daily            # seasons, matches, match/player stats, lineups
+npm run dev                   # http://localhost:3000
+```
+
+### Data sync
+
+| Command | What it does |
+|---|---|
+| `npm run sync:daily` | Seasons → matches → match & player stats → line-ups for the next 48 h |
+| `npm run sync:lineups` | Line-ups for matches starting in the next 3 h |
+| `npm run sync:players` | Player profiles (age, height, market value, contract, injuries) for every tracked squad + careers/transfers of the 800 most-played players not refreshed in 30 days; runs weekly |
+| `npm run sync:player-extras -- --limit 300 [--all] [--dry]` | One-off backfill of detailed player stats for older matches (1 request per match) |
+
+In production these run on a schedule from [`.github/workflows/sync.yml`](.github/workflows/sync.yml).
+
+## Deployment (Vercel + hosted Postgres)
+
+1. Create a Postgres database (e.g. Neon or Supabase free tier). The full dataset is about 100 MB.
+2. Run the migrations against it: `DATABASE_URL=... npx prisma migrate deploy`, then `npm run db:seed`.
+3. Load data, either with `npm run sync:daily` or by copying an existing local database (`pg_dump --data-only` → `psql`).
+4. Import the repo in Vercel and set `DATABASE_URL` (use the pooled connection string).
+5. In GitHub, add the repository secrets `DATABASE_URL` and `BSD_API_TOKEN` so the scheduled sync keeps the data fresh.
+
+## Testing
+
+| Layer | Tool | Scope |
+|---|---|---|
+| Unit | Vitest | Analysis engine: sample selection, hit rates, ladders, card totals, Poisson model, ratings, H2H, player profile, matchup |
+| End-to-end | Playwright | Navigation, date picker, search, match / team / player pages, compare, filters and sorting, leaderboards, empty states, 404, no horizontal overflow, on desktop and mobile |
+| CI | GitHub Actions | Lint, type check and unit tests on every push |
+
+```bash
+npm run lint
+npx vitest run
+npm run test:e2e        # builds the app and runs Playwright against the production build
+```
+
+## How this was built
+
+The implementation was written with an AI coding assistant (Claude). My role was product owner and QA:
+
+- defined the requirements and statistics rules, researched and compared data APIs, and ran the API spike;
+- made the design decisions (sample rules, thresholds, which features to build or drop);
+- wrote and executed the manual test plan, logged and verified the bugs found;
+- set up and debugged the automated test pipeline (e.g. diagnosing Windows file-lock failures and switching E2E runs to a production build).
+
+## Disclaimer
+
+Statistics are based on past matches and are for informational purposes only. Data © Bzzoiro Sports Data. Team logos and player photos belong to their respective owners.
+
+## License
+
+[MIT](LICENSE)

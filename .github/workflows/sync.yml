@@ -1,0 +1,45 @@
+# Scheduled data sync from the BSD API into the production database.
+# Requires repository secrets: DATABASE_URL, BSD_API_TOKEN.
+name: Data sync
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # daily: seasons, fixtures/results, match & player stats, lineups for the next 48 h
+    - cron: "30 */3 * * *" # every 3 h: lineups of matches starting soon
+    - cron: "0 4 * * 1" # weekly (Monday): player profiles (market value, injuries, contracts) + careers/transfers
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which sync to run"
+        type: choice
+        options: [daily, lineups, players]
+        default: daily
+
+concurrency:
+  group: data-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      BSD_API_TOKEN: ${{ secrets.BSD_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - name: Daily sync
+        if: github.event.schedule == '0 9 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'daily')
+        run: npm run sync:daily
+      - name: Lineups
+        if: github.event.schedule == '30 */3 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'lineups')
+        run: npm run sync:lineups
+      - name: Player profiles
+        if: github.event.schedule == '0 4 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.job == 'players')
+        run: npm run sync:players

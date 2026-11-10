@@ -1,0 +1,313 @@
+// Gokostats veritabanı şeması
+// Kaynak veri: Bzzoiro Sports Data (BSD) API. Kimlikler BSD kimlikleridir.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enum'lar ----------
+
+enum CompetitionType {
+  LEAGUE
+  EUROPE
+  CUP
+  FRIENDLY
+}
+
+enum Period {
+  FULL
+  H1
+  H2
+}
+
+enum LineupStatus {
+  CONFIRMED
+  PREDICTED
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+// ---------- Temel varlıklar ----------
+
+model League {
+  id                 Int             @id // BSD league_id
+  name               String
+  country            String
+  competitionType    CompetitionType
+  isTracked          Boolean         @default(false)
+  playerStatsEnabled Boolean         @default(false) // oyuncu istatistikleri çekilsin mi
+
+  seasons Season[]
+  matches Match[]
+
+  @@map("leagues")
+}
+
+model Season {
+  id        Int      @id // BSD season_id
+  leagueId  Int
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isCurrent Boolean  @default(false)
+
+  league  League  @relation(fields: [leagueId], references: [id])
+  matches Match[]
+
+  @@index([leagueId])
+  @@map("seasons")
+}
+
+model Team {
+  id   Int    @id // BSD team_id
+  name String
+
+  homeMatches Match[]           @relation("HomeTeam")
+  awayMatches Match[]           @relation("AwayTeam")
+  teamStats   TeamMatchStat[]
+  lineups     MatchLineup[]
+  playerStats PlayerMatchStat[]
+
+  @@index([name])
+  @@map("teams")
+}
+
+model Player {
+  id       Int     @id // BSD player id
+  name     String
+  position String? // G, D, M, F
+
+  // Profil (BSD /players/): takım kadrosu listesinden haftalık güncellenir
+  shortName        String?
+  specificPosition String? // ST, LW, CB, DM...
+  jerseyNumber     Int?
+  dateOfBirth      DateTime? @db.Date
+  heightCm         Int?
+  weightKg         Int?
+  preferredFoot    String? // R, L, B
+  nationality      String?
+  currentTeamId    Int? // BSD takım id'si (teams tablosunda olmayabilir)
+  currentTeamName  String?
+  nationalTeamId   Int?
+  nationalTeamName String?
+  marketValueEur   BigInt?
+  contractUntil    DateTime? @db.Date
+  availability     String? // available, injured, doubtful...
+  injuryType       String?
+  injuryReturn     DateTime? @db.Date
+  profileSyncedAt  DateTime?
+  careerSyncedAt   DateTime? // kariyer + transferler
+
+  lineups   MatchLineup[]
+  stats     PlayerMatchStat[]
+  career    PlayerCareerSeason[]
+  transfers PlayerTransfer[]
+
+  @@index([name])
+  @@map("players")
+}
+
+model Match {
+  id              Int       @id // BSD event id
+  leagueId        Int
+  seasonId        Int?
+  homeTeamId      Int
+  awayTeamId      Int
+  eventDate       DateTime
+  status          String // BSD değeri: notstarted, inprogress, finished, postponed...
+  replacedBy      Int? // ertelenen maçın yeni maç id'si
+  roundNumber     Int? // hafta numarası (yalnızca gösterim için)
+  stage           String?
+  homeScore       Int?
+  awayScore       Int?
+  homeScoreHt     Int?
+  awayScoreHt     Int?
+  detailsSyncedAt DateTime? // stats, player-stats, lineups çekildiği zaman
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  scoresOnly      Boolean   @default(false) // yalnızca skor arşivi; sync-details dokunmaz
+
+  league      League            @relation(fields: [leagueId], references: [id])
+  season      Season?           @relation(fields: [seasonId], references: [id])
+  homeTeam    Team              @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team              @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  teamStats   TeamMatchStat[]
+  lineups     MatchLineup[]
+  playerStats PlayerMatchStat[]
+
+  @@index([eventDate])
+  @@index([homeTeamId, eventDate])
+  @@index([awayTeamId, eventDate])
+  @@index([leagueId, status])
+  @@map("matches")
+}
+
+// ---------- Maç verisi ----------
+
+model TeamMatchStat {
+  id            Int     @id @default(autoincrement())
+  matchId       Int
+  teamId        Int
+  period        Period
+  isHome        Boolean
+  corners       Int?
+  yellowCards   Int?
+  redCards      Int?
+  shotsTotal    Int?
+  shotsOnTarget Int?
+  fouls         Int?
+  offsides      Int?
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id])
+
+  @@unique([matchId, teamId, period])
+  @@map("team_match_stats")
+}
+
+model MatchLineup {
+  id           Int          @id @default(autoincrement())
+  matchId      Int
+  teamId       Int
+  playerId     Int
+  isStarter    Boolean
+  lineupStatus LineupStatus
+  updatedAt    DateTime     @updatedAt
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id])
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([matchId, playerId])
+  @@index([playerId])
+  @@map("match_lineups")
+}
+
+model PlayerMatchStat {
+  id            Int @id @default(autoincrement())
+  matchId       Int
+  playerId      Int
+  teamId        Int
+  minutesPlayed Int @default(0)
+  goals         Int @default(0)
+  assists       Int @default(0)
+  shotsTotal    Int @default(0)
+  shotsOnTarget Int @default(0)
+  tackles       Int @default(0) // BSD: total_tackle
+  fouls         Int @default(0) // yaptığı faul
+  yellowCards   Int @default(0)
+  redCards      Int @default(0)
+
+  // Detaylı istatistikler (BSD player-stats). null = çekilmedi ya da BSD bu maç için vermiyor.
+  // Ortalamalar yalnızca dolu satırlardan hesaplanır.
+  extrasSynced      Boolean @default(false) // detaylı alanlar BSD'den çekildi mi (backfill işareti)
+  rating            Float?
+  touches           Int?
+  keyPasses         Int? // key_pass
+  passesTotal       Int?
+  passesAccurate    Int?
+  longBallsTotal    Int?
+  longBallsAccurate Int?
+  crossesTotal      Int?
+  crossesAccurate   Int?
+  dribblesTotal     Int? // total_contest
+  dribblesWon       Int? // won_contest
+  duelsWon          Int?
+  duelsLost         Int?
+  aerialsWon        Int?
+  aerialsLost       Int?
+  tacklesWon        Int?
+  interceptions     Int?
+  clearances        Int?
+  ballRecoveries    Int?
+  blocks            Int? // outfielder_block
+  dispossessed      Int?
+  possessionLost    Int?
+  wasFouled         Int? // maruz kaldığı faul
+  offsides          Int? // total_offside
+  bigChancesCreated Int?
+  bigChancesMissed  Int?
+  hitWoodwork       Int?
+  xg                Float? // expected_goals
+  xa                Float? // expected_assists
+  saves             Int?
+  goalsConceded     Int?
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id])
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  @@unique([matchId, playerId])
+  @@index([playerId])
+  @@index([teamId])
+  @@map("player_match_stats")
+}
+
+// ---------- Oyuncu kariyeri ----------
+
+// BSD /players/{id}/career/: sezon × takım özeti. Lig, sezon ve takım adları senkronda çözülüp saklanır
+// (bu ligler/takımlar bizim tablolarımızda olmayabilir).
+model PlayerCareerSeason {
+  id         Int     @id @default(autoincrement())
+  playerId   Int
+  seasonId   Int
+  seasonName String?
+  leagueId   Int
+  leagueName String?
+  teamId     Int
+  teamName   String?
+  matches    Int     @default(0)
+  minutes    Int     @default(0)
+  goals      Int     @default(0)
+  assists    Int     @default(0)
+  avgRating  Float?
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, seasonId, teamId])
+  @@index([playerId])
+  @@map("player_career_seasons")
+}
+
+// BSD /players/{id}/transfers/
+model PlayerTransfer {
+  id             Int      @id // BSD transfer id
+  playerId       Int
+  transferDate   DateTime @db.Date
+  fromTeamId     Int?
+  fromTeamName   String?
+  toTeamId       Int?
+  toTeamName     String?
+  feeEur         BigInt?
+  feeDescription String?
+  transferType   Int?
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@map("player_transfers")
+}
+
+// ---------- Sistem ----------
+
+// Senkron görevlerinin kaydı: süre, istek sayısı, hata
+model SyncRun {
+  id           Int        @id @default(autoincrement())
+  job          String
+  startedAt    DateTime   @default(now())
+  finishedAt   DateTime?
+  status       SyncStatus @default(RUNNING)
+  requestsUsed Int        @default(0)
+  error        String?
+
+  @@map("sync_runs")
+}
