@@ -27,6 +27,11 @@ export interface EvidenceRow {
   label: string;
   outcome: Outcome;
   value?: number | null;
+  // Kutucuk görünümü için: rakip ve takımın gözünden skor (ör. "2-1"); eski önbellek kayıtlarında olmayabilir
+  opponentId?: number;
+  opponentName?: string;
+  score?: string;
+  isHome?: boolean;
 }
 
 export interface RateSummary {
@@ -168,7 +173,12 @@ export async function teamHistory(teamId: number, from: Date, to: Date): Promise
   }));
 }
 
-function summarizeTeam(sample: Sample<TeamRow>, rule: (m: MatchScore) => Outcome, rows: Map<number, TeamRow>): RateSummary {
+function summarizeTeam(
+  sample: Sample<TeamRow>,
+  rule: (m: MatchScore) => Outcome,
+  rows: Map<number, TeamRow>,
+  teamId: number,
+): RateSummary {
   // Kural, takımın bakış açısına çevrilmiş maça uygulanır (genel formda deplasman maçları çevrilir); etiket gerçek skoru gösterir
   const r = computeRate(sample.items, (item) => rule(item));
   return {
@@ -182,9 +192,14 @@ function summarizeTeam(sample: Sample<TeamRow>, rule: (m: MatchScore) => Outcome
         row.totalCorners !== null ? `${row.totalCorners} korner` : null,
         row.totalCards !== null ? `${row.totalCards} kart` : null,
       ].filter(Boolean);
+      const isHome = row.homeTeamId === teamId;
       return {
         matchId: item.id,
         eventDate: item.eventDate,
+        opponentId: isHome ? row.awayTeamId : row.homeTeamId,
+        opponentName: isHome ? row.awayName : row.homeName,
+        score: isHome ? `${row.homeScore}-${row.awayScore}` : `${row.awayScore}-${row.homeScore}`,
+        isHome,
         label:
           `${row.homeName} ${row.homeScore}-${row.awayScore} ${row.awayName} (İY ${row.homeScoreHt}-${row.awayScoreHt})` +
           (extras.length ? ` · ${extras.join(" · ")}` : ""),
@@ -367,8 +382,8 @@ async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): 
   for (const mk of trends.filter((m) => m.scope === "TEAM")) {
     const rule = teamRuleFor(mk);
     if (!rule) continue; // tanımsız trend
-    const home = summarizeTeam(homeSample, rule, rows);
-    const away = summarizeTeam(awaySample, rule, rows);
+    const home = summarizeTeam(homeSample, rule, rows, match.homeTeamId);
+    const away = summarizeTeam(awaySample, rule, rows, match.awayTeamId);
     const side = isTrendSide(mk.side) ? mk.side : null;
     teamTrends.push({
       code: mk.code,
@@ -453,6 +468,10 @@ async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): 
             label: labels.get(item.matchId) ?? "",
             outcome,
             value: item[statKey] ?? null,
+            opponentId: item.opponentId,
+            opponentName: item.opponentName,
+            score: item.score,
+            isHome: item.isHome,
           })),
         };
         return {

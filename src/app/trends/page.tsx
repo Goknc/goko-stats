@@ -4,13 +4,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { listable } from "@/lib/match-filters";
-import { analyzeMatch, type RateSummary } from "@/lib/analysis";
+import { analyzeMatch, type EvidenceRow, type RateSummary } from "@/lib/analysis";
 import { DEFAULT_SAMPLE } from "@/lib/app-settings";
 import { TRENDS } from "@/lib/trend-config";
 import { dayRange, formatLongDate, formatTime, matchDayKey, parseDateParam } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormStrip } from "@/components/form-strip";
+import { MatchStrip } from "@/components/match-strip";
 import { RatePercent } from "@/components/rate-percent";
 import { FilterSelect } from "@/components/filter-select";
 import { cn } from "@/lib/utils";
@@ -26,8 +26,7 @@ interface Line {
   hits: number;
   total: number;
   rate: number | null;
-  outcomes: (boolean | null)[];
-  titles: string[];
+  evidence: EvidenceRow[];
   context?: boolean;
 }
 
@@ -49,8 +48,7 @@ const toLine = (label: string, s: RateSummary, context = false): Line => ({
   hits: s.hits,
   total: s.total,
   rate: s.rate,
-  outcomes: s.evidence.map((e) => e.outcome),
-  titles: s.evidence.map((e) => e.label),
+  evidence: s.evidence,
 });
 
 type SortKey = "yuzde" | "saat" | "mac";
@@ -64,10 +62,10 @@ const byTime = (x: Pick, y: Pick) => x.time.getTime() - y.time.getTime() || x.ma
 const byRate = (x: Pick, y: Pick) => y.rate - x.rate || y.sample - x.sample || byTime(x, y);
 
 // showTrend: maça göre görünümde maç başlıkta olduğu için satırda trend adı gösterilir.
-// Geniş ekranda üç sütun (saat · maç · karneler); karnelerde etiket, şerit, x/y ve yüzde alt alta hizalı.
+// Geniş ekranda üç sütun (saat · maç · karneler); karnelerde etiket, maç şeridi (rakip logosu + skor, sığmazsa yana kayar), x/y ve yüzde alt alta hizalı.
 function PickRow({ pick, showTrend = false }: { pick: Pick; showTrend?: boolean }) {
   return (
-    <div className="grid gap-x-6 gap-y-3 border-t border-border py-4 first:border-t-0 first:pt-0 lg:grid-cols-[3rem_minmax(0,15rem)_minmax(0,1fr)] lg:items-center">
+    <div className="grid gap-x-6 gap-y-3 border-t border-border py-4 first:border-t-0 first:pt-0 lg:grid-cols-[3rem_minmax(0,14rem)_minmax(0,1fr)] lg:items-center">
       <span className="text-sm tabular-nums text-muted-foreground">{formatTime(pick.time)}</span>
       <div className="min-w-0">
         {showTrend ? (
@@ -86,14 +84,14 @@ function PickRow({ pick, showTrend = false }: { pick: Pick; showTrend?: boolean 
           // Mobilde etiket, x/y ve yüzde üstte; şerit altta tam satır
           <div
             key={line.label}
-            className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto_3.5rem_3rem]"
+            className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_3.5rem_3rem]"
           >
             <span className="min-w-0 truncate text-sm text-muted-foreground">
               {line.label}
               {line.context && <span className="ml-1.5 text-xs">(rakip, bilgi)</span>}
             </span>
-            <div className="order-last col-span-full sm:order-none sm:col-span-1">
-              <FormStrip outcomes={line.outcomes} labels={line.titles} size="auto" />
+            <div className="order-last col-span-full min-w-0 sm:order-none sm:col-span-1">
+              <MatchStrip evidence={line.evidence} />
             </div>
             <span className="text-right text-sm tabular-nums text-muted-foreground">
               {line.hits}/{line.total}
