@@ -20,7 +20,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const { teams, players } = q.length >= MIN_QUERY ? await search(q, "all", 30) : { teams: [], players: [] };
 
   return (
-    <main className="mx-auto w-full max-w-4xl space-y-4 p-4">
+    <main className="mx-auto w-full max-w-5xl space-y-9 px-4 py-8 sm:px-8 sm:py-12">
       <h1 className="text-2xl font-bold">Ara</h1>
       <SearchBox className="max-w-xl" autoFocus />
 

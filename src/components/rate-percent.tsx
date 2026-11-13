@@ -1,4 +1,4 @@
-// Oranın yüzdesi, güce göre renkli: %90+ yeşil, %75-89 camgöbeği, altı beyaz.
+// Oranın yüzdesi, güce göre vurgulu: %90+ "ateşli" (büyür, pembe gölge, hafifçe titrer), %75-89 mor, altı siyah.
 import { cn } from "@/lib/utils";
 
 export function RatePercent({ rate, className }: { rate: number | null; className?: string }) {
@@ -7,8 +7,8 @@ export function RatePercent({ rate, className }: { rate: number | null; classNam
   return (
     <span
       className={cn(
-        "font-semibold tabular-nums",
-        pct >= 90 ? "text-hit" : pct >= 75 ? "text-primary" : "text-foreground",
+        "inline-block font-semibold tabular-nums",
+        pct >= 90 ? "rate-fire" : pct >= 75 ? "rate-hot" : "text-foreground",
         className,
       )}
     >

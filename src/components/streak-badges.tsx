@@ -15,13 +15,9 @@ export function StreakBadges({ streaks, className, size = "md" }: { streaks: Str
           <span
             key={s.group}
             className={cn(
-              "inline-flex items-center gap-1 rounded-full border font-semibold",
-              size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
-              cold
-                ? "border-border bg-secondary text-muted-foreground"
-                : hot
-                  ? "border-hit/60 bg-hit/15 text-hit"
-                  : "border-primary/40 bg-primary/10 text-primary",
+              "inline-flex items-center gap-1 rounded-full border-2 border-foreground font-bold",
+              size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-3 py-1 text-sm",
+              cold ? "bg-[#cfe0ff]" : hot ? "bg-[#ffb9d6]" : "bg-[var(--yellow)]",
             )}
           >
             <Icon className={size === "sm" ? "size-3" : "size-3.5"} aria-hidden="true" />

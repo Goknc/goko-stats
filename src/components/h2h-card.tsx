@@ -195,7 +195,7 @@ export function H2HCard({ h, home, away, players, filterHref }: H2HCardProps) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-secondary/60 px-3 py-2">
+    <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-2">
       <div className="truncate text-xs text-muted-foreground">{label}</div>
       <div className="text-lg font-bold tabular-nums">{value}</div>
     </div>
@@ -227,7 +227,7 @@ function H2HPlayersSection({ p, home, away }: { p: H2HPlayers; home: { name: str
 
 function PlayerList({ title, players, matches, tone }: { title: string; players: H2HPlayerSummary[]; matches: number; tone: string }) {
   return (
-    <div className="rounded-lg bg-secondary/60 px-3 py-2">
+    <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-2">
       <div className={cn("mb-1 truncate text-xs font-semibold", tone)}>{title}</div>
       {players.length === 0 ? (
         <p className="py-1 text-sm text-muted-foreground">Öne çıkan yok</p>

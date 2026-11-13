@@ -16,7 +16,7 @@ import {
 } from "@/lib/engine/player-bio";
 import { positionBenchmark } from "@/lib/position-benchmarks";
 import { playerKingHighlights } from "@/lib/kings";
-import { Trophy } from "lucide-react";
+import { Crown, Trophy } from "lucide-react";
 import {
   benchPer90, benchRates, LOWER_IS_BETTER, MIN_ATTEMPTS, MIN_MINUTES, TOP_SHARE, topPercent, topShare, type BenchPlayer,
 } from "@/lib/engine/position-rank";
@@ -28,6 +28,7 @@ import { TZ } from "@/lib/dates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, type Bar } from "@/components/bar-chart";
 import { GameChips } from "@/components/game-chips";
+import { RatePercent } from "@/components/rate-percent";
 import { StreakBadges } from "@/components/streak-badges";
 import { FilterSelect } from "@/components/filter-select";
 import { Segmented } from "@/components/segmented";
@@ -153,10 +154,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 function Tile({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="rounded-lg bg-secondary/60 px-3 py-3 text-center">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-extrabold tabular-nums">{value}</div>
-      {sub && <div className="text-xs tabular-nums text-muted-foreground">{sub}</div>}
+    <div className="tile rounded-2xl border-[2.5px] border-foreground bg-white px-3 py-4 text-center transition-transform hover:-translate-y-1 hover:-rotate-1">
+      <div className="poster text-sm text-muted-foreground">{label}</div>
+      <div className="poster mt-1 text-5xl leading-none tabular-nums">{value}</div>
+      {sub && <div className="mt-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{sub}</div>}
     </div>
   );
 }
@@ -313,100 +314,123 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   const logColumns = LOG_COLUMNS.filter((c) => !c.goalkeeper || isKeeper);
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 p-4">
+    <main className="mx-auto w-full max-w-[92rem] space-y-9 px-4 py-8 sm:px-8 sm:py-12">
       {/* Başlık */}
-      <header className="space-y-4 rounded-xl border border-border bg-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <PlayerPhoto id={data.player.id} name={data.player.name} size={80} className="ring-2 ring-border" />
+      <header className="space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
+            {/* Büyük photocard: eğik, renkli gölgeli */}
+            <div className="relative w-fit shrink-0">
+              <span
+                style={{ "--pop": "var(--pink)" } as React.CSSProperties}
+                className="photocard -rotate-3 overflow-hidden border-[3px] shadow-[8px_8px_0_var(--pink)] transition-transform hover:rotate-0"
+              >
+                <PlayerPhoto id={data.player.id} name={data.player.name} size={200} />
+              </span>
+              {profile.jerseyNumber !== null && (
+                <span className="poster absolute -bottom-2 -right-3 flex size-16 rotate-6 items-center justify-center rounded-full border-[3px] border-foreground bg-[var(--yellow)] text-3xl shadow-[3px_3px_0_var(--ink)]">
+                  {profile.jerseyNumber}
+                </span>
+              )}
+            </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-bold sm:text-3xl">{data.player.name}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-base font-bold [&>*]:rounded-full [&>*]:border-2 [&>*]:border-foreground [&>*]:bg-white [&>*]:px-3 [&>*]:py-1">
                 {data.team && (
-                  <Link href={`/teams/${data.team.id}`} className="flex items-center gap-1.5 font-medium text-primary hover:underline">
-                    <TeamLogo id={data.team.id} name={data.team.name} size={18} />
+                  <Link href={`/teams/${data.team.id}`} className="flex items-center gap-2 !bg-[var(--lilac)] hover:underline">
+                    <TeamLogo id={data.team.id} name={data.team.name} size={26} />
                     {data.team.name}
                   </Link>
                 )}
                 {data.league && (
                   <span className="flex items-center gap-1.5">
-                    <LeagueLogo id={data.league.id} name={data.league.name} size={16} />
+                    <LeagueLogo id={data.league.id} name={data.league.name} size={22} />
                     {data.league.name}
                   </span>
                 )}
                 {data.player.position && POSITIONS[data.player.position] && (
                   <span>{specificPositionName(profile.specificPosition) ?? POSITIONS[data.player.position]}</span>
                 )}
-                {profile.jerseyNumber !== null && <span className="font-semibold tabular-nums">#{profile.jerseyNumber}</span>}
               </div>
               {facts.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <dl className="mt-4 flex flex-wrap gap-x-7 gap-y-3">
                   {facts.map((f) => (
-                    <span key={f.label} title={f.title} className="flex items-center gap-1.5">
-                      {f.teamId !== undefined && <TeamLogo id={f.teamId} name={f.value} size={14} />}
-                      <span className="text-muted-foreground">{f.label}</span>
-                      <span className="font-semibold">{f.value}</span>
-                    </span>
+                    <div key={f.label} title={f.title}>
+                      <dt className="marker text-lg leading-none text-[var(--purple)]">{f.label.toLocaleLowerCase("tr")}</dt>
+                      <dd className="flex items-center gap-1.5 text-lg font-extrabold">
+                        {f.teamId !== undefined && <TeamLogo id={f.teamId} name={f.value} size={20} />}
+                        {f.value}
+                      </dd>
+                    </div>
                   ))}
-                </div>
+                </dl>
               )}
             </div>
           </div>
           {data.nextMatch && (
             <Link
               href={`/matches/${data.nextMatch.id}`}
-              className="rounded-lg border border-border bg-background/60 px-4 py-2 text-sm transition-colors hover:border-primary/60"
+              className="pop rotate-1 rounded-2xl bg-[var(--yellow)] px-5 py-3"
             >
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">Sıradaki maç</div>
-              <div className="font-semibold">
+              <div className="marker text-xl leading-none">sıradaki maç →</div>
+              <div className="text-lg font-extrabold">
                 {data.nextMatch.homeName} – {data.nextMatch.awayName}
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-sm font-semibold">
                 {data.nextMatch.eventDate.toLocaleString("tr-TR", { timeZone: TZ, day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
               </div>
             </Link>
           )}
         </div>
         {kingBadges.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground" title="Güncel sezon toplamında ilk 10">
-              Krallık
-            </span>
+          <section>
+            <h2 className="poster mb-3 flex items-center gap-2 text-2xl" title="Güncel sezon toplamında ilk 10">
+              <Trophy className="size-6 text-[var(--purple)]" aria-hidden="true" />
+              Krallık vitrini
+              <span className="marker rounded-full bg-[var(--yellow)] px-2.5 text-xl normal-case">{kingBadges.length} ödül</span>
+            </h2>
+            {/* Eşit boyutlu ödül kartları: büyük sıra numarası, altında kategori ve kapsam */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {kingBadges.map((k) => (
               <Link
                 key={`${k.statKey}-${k.leagueId ?? "all"}-${k.position ?? "all"}`}
                 href={`/kings?stat=${k.statKey}${k.leagueId !== null ? `&league=${k.leagueId}` : ""}${k.position ? `&pos=${k.position}` : ""}`}
                 title={`${k.scope}${k.positionLabel ? ` · ${k.positionLabel}` : ""} · ${k.statName}: ${k.decimals ? fmt(k.total) : k.total}`}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors hover:border-primary",
+                  "pop flex items-center gap-3 rounded-2xl px-3 py-2.5",
                   k.position === null && k.rank === 1
-                    ? "border-hit/60 bg-hit/15 text-hit"
+                    ? "bg-[var(--yellow)]"
                     : k.rank === 1 || (k.position === null && k.rank <= 3)
-                      ? "border-primary/40 bg-primary/10 text-primary"
-                      : "border-border bg-secondary/60",
+                      ? "bg-[var(--lilac)]"
+                      : "bg-white",
                 )}
               >
-                <Trophy className="size-3.5" aria-hidden="true" />
-                <span>
-                  {k.positionLabel && <span className="font-normal">{k.positionLabel} arasında </span>}
-                  {k.positionLabel ? k.statName.charAt(0).toLocaleLowerCase("tr") + k.statName.slice(1) : k.statName}{" "}
-                  {k.rank === 1 ? "lideri" : `${k.rank}.`}
+                <span className="poster flex w-11 shrink-0 flex-col items-center text-4xl leading-none">
+                  {k.rank === 1 && <Crown className="-mb-0.5 size-5 fill-[var(--pink)]" aria-hidden="true" />}
+                  {k.rank}
                 </span>
-                <span className="font-normal opacity-70">{k.scope}</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate font-extrabold">{k.statName}</span>
+                  <span className="block truncate text-xs font-medium opacity-75">
+                    {k.scope}
+                    {k.positionLabel && ` · ${k.positionLabel}`}
+                  </span>
+                </span>
               </Link>
             ))}
-          </div>
+            </div>
+          </section>
         )}
         {injury && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-miss/50 bg-miss/10 px-3 py-2 text-sm">
+          <div className="flex w-fit flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border-[2.5px] border-foreground bg-[#ffc2dc] px-4 py-2 font-semibold shadow-[4px_4px_0_var(--ink)]">
             <span className="font-bold text-miss">{injury.label}</span>
             {injury.type && <span>{injury.type}</span>}
             {injury.back && <span className="text-muted-foreground">· tahmini dönüş {injury.back}</span>}
           </div>
         )}
         {streaks.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground" title="Oynadığı son maçlardan geriye, bütün turnuvalar">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="poster text-xl" title="Oynadığı son maçlardan geriye, bütün turnuvalar">
               Seriler
             </span>
             <StreakBadges streaks={streaks} />
@@ -428,7 +452,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
       ) : (
         <>
           {/* Özet */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+          <div className="tiles grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-8">
             <Tile label="Maç" value={summary.apps} sub={`${summary.starts} ilk 11`} />
             <Tile label="Dakika" value={summary.minutes.toLocaleString("tr-TR")} />
             <Tile label="Gol" value={summary.totals.goals} sub={`${fmt(summary.per90.goals)} / 90 dk`} />
@@ -456,22 +480,23 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
                   {hl.map((h) => (
                     <div
                       key={h.code}
-                      className="space-y-3 rounded-xl border border-border bg-background/40 p-4"
+                      className="space-y-3 rounded-2xl border-2 border-foreground bg-secondary/50 p-4"
                     >
                       <Link
                         href={href({ stat: h.statKey, line: String(h.line - 0.5) })}
                         scroll={false}
                         className="flex items-baseline justify-between gap-2 hover:text-primary"
                       >
-                        <span className="font-semibold">{h.name}</span>
+                        <span className="poster text-2xl">{h.name}</span>
                         <span className="flex items-baseline gap-2">
-                          <span className="text-xs tabular-nums text-muted-foreground">
+                          <span className="text-sm tabular-nums text-muted-foreground">
                             {h.hits}/{h.total}
                           </span>
-                          <span className="text-lg font-extrabold tabular-nums">{pct(h.rate)}</span>
+                          <RatePercent rate={h.rate} className="poster text-3xl font-normal" />
                         </span>
                       </Link>
                       <GameChips
+                        line={h.line}
                         items={allStarts.map((g) => ({
                           matchId: g.matchId,
                           value: g.stats[h.statKey],

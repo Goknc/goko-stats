@@ -27,19 +27,23 @@ function MatchRow({ m, date, showLeague }: { m: ListMatch; date: string; showLea
   return (
     <Link
       href={`/matches/${m.id}?date=${date}`}
-      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 sm:px-6"
+      className="group flex items-center gap-4 px-(--card-spacing) py-3.5 text-lg transition-colors hover:bg-[var(--yellow)]"
     >
-      <span className="w-11 shrink-0 text-sm tabular-nums text-muted-foreground">{formatTime(m.eventDate)}</span>
+      <span className="poster shrink-0 rounded-full bg-foreground px-2.5 py-0.5 text-base tabular-nums text-white">{formatTime(m.eventDate)}</span>
       {/* Mobilde takımlar alt alta, masaüstünde yan yana */}
-      <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <TeamLogo id={m.homeTeamId} name={m.homeTeam.name} />
-          <span className="truncate">{m.homeTeam.name}</span>
+      <span className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="photocard size-11 transition-transform group-hover:-rotate-6">
+            <TeamLogo id={m.homeTeamId} name={m.homeTeam.name} size={30} />
+          </span>
+          <span className="truncate font-bold">{m.homeTeam.name}</span>
         </span>
-        <span className="hidden sm:inline">–</span>
-        <span className="flex min-w-0 items-center gap-1.5">
-          <TeamLogo id={m.awayTeamId} name={m.awayTeam.name} />
-          <span className="truncate">{m.awayTeam.name}</span>
+        <span className="marker hidden text-2xl leading-none text-[var(--pink)] sm:inline">vs</span>
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="photocard size-11 transition-transform group-hover:rotate-6">
+            <TeamLogo id={m.awayTeamId} name={m.awayTeam.name} size={30} />
+          </span>
+          <span className="truncate font-bold">{m.awayTeam.name}</span>
         </span>
         {showLeague && (
           <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto sm:max-w-[40%] sm:pl-3">
@@ -49,7 +53,7 @@ function MatchRow({ m, date, showLeague }: { m: ListMatch; date: string; showLea
         )}
       </span>
       {m.status === "finished" ? (
-        <span className="flex shrink-0 flex-col items-end font-medium tabular-nums sm:flex-row sm:gap-0.5">
+        <span className="poster flex shrink-0 flex-col items-end text-3xl tabular-nums sm:flex-row sm:gap-1">
           <span>{m.homeScore}</span>
           <span className="hidden sm:inline">-</span>
           <span>{m.awayScore}</span>
@@ -91,24 +95,25 @@ export default async function MatchListPage({ searchParams }: { searchParams: Pr
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 p-4">
+    <main className="mx-auto w-full max-w-[92rem] space-y-9 px-4 py-8 sm:px-8 sm:py-12">
       {/* Tarih seçimi üst menüdeki gün şeridinde */}
-      <h1 className="sr-only">Maçlar</h1>
+      <h1>Bugünün sahnesi</h1>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-muted-foreground">
-            {formatLongDate(date)} · {matches.length} maç
+          <p className="text-xl font-bold">
+            {formatLongDate(date)}{" "}
+            <span className="marker ml-1 inline-block -rotate-2 rounded-full bg-[var(--yellow)] px-3 text-2xl">{matches.length} maç!</span>
           </p>
-          <div className="flex rounded-lg bg-secondary p-1 text-sm">
+          <div className="flex rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)] text-sm">
             {LIST_SORTS.map((o) => (
               <Link
                 key={o.key}
                 href={`/?date=${date}${o.key === "saat" ? "&sort=saat" : ""}`}
                 scroll={false}
                 className={cn(
-                  "rounded-md px-3 py-1 font-medium transition-colors",
-                  sort === o.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  "rounded-full px-3.5 py-1 font-bold transition-colors",
+                  sort === o.key ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {o.label}
@@ -144,21 +149,26 @@ export default async function MatchListPage({ searchParams }: { searchParams: Pr
         </Card>
       )}
 
-      {sort === "lig" && [...byLeague.entries()].sort(([a], [b]) => byLeaguePopularity(a, b)).map(([league, list]) => (
-        <Card key={league}>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <LeagueLogo id={list[0].leagueId} name={league} />
-              {league}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="divide-y p-0">
-            {list.map((m) => (
-              <MatchRow key={m.id} m={m} date={date} showLeague={false} />
-            ))}
-          </CardContent>
-        </Card>
-      ))}
+      {/* Ligler geniş ekranda iki sütuna akar */}
+      {sort === "lig" && (
+        <div className="gap-9 xl:columns-2">
+          {[...byLeague.entries()].sort(([a], [b]) => byLeaguePopularity(a, b)).map(([league, list]) => (
+            <Card key={league} className="mb-9 break-inside-avoid">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <LeagueLogo id={list[0].leagueId} name={league} size={36} />
+                  {league}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="divide-y-2 divide-dashed p-0">
+                {list.map((m) => (
+                  <MatchRow key={m.id} m={m} date={date} showLeague={false} />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

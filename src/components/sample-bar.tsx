@@ -17,16 +17,16 @@ export function Segment<T extends string | number>({
 }: { label: string; options: { value: T; text: string }[]; current: T; href: (v: T) => string }) {
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <div className="flex rounded-lg bg-secondary p-1">
+      <span className="poster text-base">{label}</span>
+      <div className="flex rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)]">
         {options.map((o) => (
           <Link
             key={o.value}
             href={href(o.value)}
             scroll={false}
             className={cn(
-              "rounded-md px-3 py-1 font-medium transition-colors",
-              current === o.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+              "rounded-full px-3.5 py-1 font-bold transition-colors",
+              current === o.value ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {o.text}
@@ -48,20 +48,20 @@ export function SampleBar({ value, defaults, hrefFor }: SampleBarProps) {
   if (!SAMPLE_SIZE_OPTIONS.includes(value.size as (typeof SAMPLE_SIZE_OPTIONS)[number])) sizes.push({ value: value.size, text: `Son ${value.size}` });
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-border bg-card px-4 py-3">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-3xl border-[2.5px] border-foreground bg-[var(--lilac)] px-4 py-3 shadow-[5px_5px_0_var(--ink)]">
       <Segment label="Form" options={sizes} current={value.size} href={(size) => hrefFor({ ...value, size })} />
       <Segment label="Takımlar" options={MODES} current={value.teamMode} href={(teamMode) => hrefFor({ ...value, teamMode })} />
       <Segment label="Oyuncular" options={MODES} current={value.playerMode} href={(playerMode) => hrefFor({ ...value, playerMode })} />
       <div className="ml-auto flex items-center gap-3 text-sm">
         {custom ? (
           <>
-            <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">özel seçim</span>
-            <Link href={hrefFor(defaults)} scroll={false} className="text-muted-foreground hover:text-foreground">
+            <span className="rounded-full border-2 border-foreground bg-[var(--yellow)] px-2 py-0.5 text-xs font-bold">özel seçim</span>
+            <Link href={hrefFor(defaults)} scroll={false} className="font-bold underline hover:text-primary">
               Sıfırla
             </Link>
           </>
         ) : (
-          <span className="text-xs text-muted-foreground">varsayılan</span>
+          <span className="marker text-xl">varsayılan ayar</span>
         )}
       </div>
     </div>

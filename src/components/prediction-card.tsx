@@ -46,9 +46,9 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
         <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
           {/* En olası skor */}
           <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">En olası skor</div>
+            <div className="marker text-2xl leading-none text-[var(--purple)]">en olası skor</div>
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-extrabold tabular-nums text-foreground">
+              <span className="poster text-7xl leading-none tabular-nums text-foreground [text-shadow:4px_4px_0_var(--yellow)]">
                 {pr.mostLikely.home}-{pr.mostLikely.away}
               </span>
               <span className="text-sm text-muted-foreground">{pct(pr.mostLikely.p)}</span>
@@ -64,8 +64,8 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
           {/* Diğer olası skorlar */}
           <div className="flex gap-2">
             {pr.topScores.slice(1).map((s) => (
-              <div key={`${s.home}-${s.away}`} className="rounded-lg bg-secondary/60 px-3 py-1.5 text-center">
-                <div className="font-bold tabular-nums">
+              <div key={`${s.home}-${s.away}`} className="rounded-2xl border-2 border-foreground bg-secondary px-4 py-1.5 text-center">
+                <div className="poster text-2xl tabular-nums">
                   {s.home}-{s.away}
                 </div>
                 <div className="text-xs text-muted-foreground">{pct(s.p)}</div>
@@ -76,18 +76,18 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
 
         {/* Sonuç olasılıkları */}
         <div className="space-y-1.5">
-          <div className="flex h-7 overflow-hidden rounded-md text-xs font-bold">
+          <div className="poster flex h-11 overflow-hidden rounded-full border-[2.5px] border-foreground text-lg shadow-[4px_4px_0_var(--ink)]">
             <div className="flex items-center justify-center bg-home text-white" style={{ width: width(pr.homeWin) }}>
               {pr.homeWin >= 0.12 && pct(pr.homeWin)}
             </div>
-            <div className="flex items-center justify-center bg-muted-foreground/40" style={{ width: width(pr.draw) }}>
+            <div className="flex items-center justify-center border-x-2 border-foreground bg-[var(--yellow)]" style={{ width: width(pr.draw) }}>
               {pr.draw >= 0.12 && pct(pr.draw)}
             </div>
             <div className="flex items-center justify-center bg-away text-white" style={{ width: width(pr.awayWin) }}>
               {pr.awayWin >= 0.12 && pct(pr.awayWin)}
             </div>
           </div>
-          <div className="grid grid-cols-3 text-xs text-muted-foreground">
+          <div className="grid grid-cols-3 pt-1 text-sm font-bold">
             <span className="truncate">{homeName}</span>
             <span className="text-center">Beraberlik</span>
             <span className="truncate text-right">{awayName}</span>
@@ -95,7 +95,7 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
         </div>
 
         {/* Gol olasılıkları */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Prob label="3+ gol" value={pr.over25} />
           <Prob label="En fazla 2 gol" value={1 - pr.over25} />
           <Prob label="İki takım da gol atar" value={pr.btts} />
@@ -105,7 +105,7 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
         {/* Benzer rakiplere karşı */}
         {p.tiers.home && p.tiers.away && (
           <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Benzer rakiplere karşı</h3>
+            <h3 className="poster text-xl text-foreground">Benzer rakiplere karşı</h3>
             <div className="grid gap-2 sm:grid-cols-2">
               <TierLine team={homeName} rec={p.tiers.homeVsAwayTier} opponent={awayName} />
               <TierLine team={awayName} rec={p.tiers.awayVsHomeTier} opponent={homeName} />
@@ -135,7 +135,7 @@ function effect(k: number): string {
 
 function TierLine({ team, rec, opponent }: { team: string; rec: TierRecord; opponent: string }) {
   return (
-    <div className="rounded-lg bg-secondary/60 px-3 py-2 text-sm">
+    <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-2 text-sm">
       <div className="text-xs text-muted-foreground">
         {team} · {TIER_LABEL[rec.tier]} gruptaki rakiplere ({opponent} gibi)
       </div>
@@ -158,9 +158,9 @@ function TierLine({ team, rec, opponent }: { team: string; rec: TierRecord; oppo
 
 function Prob({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg bg-secondary/60 px-3 py-2">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-lg font-bold tabular-nums">{pct(value)}</div>
+    <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-2">
+      <div className="text-sm font-semibold text-muted-foreground">{label}</div>
+      <div className="poster text-4xl leading-tight tabular-nums">{pct(value)}</div>
     </div>
   );
 }

@@ -10,15 +10,15 @@ export function Segmented<T extends string>({
   href: (key: T) => string;
 }) {
   return (
-    <div className="flex w-fit flex-wrap rounded-lg bg-secondary p-1 text-sm">
+    <div className="flex w-fit flex-wrap rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)] text-sm">
       {options.map((o) => (
         <Link
           key={o.key}
           href={href(o.key)}
           scroll={false}
           className={cn(
-            "rounded-md px-3 py-1 font-medium whitespace-nowrap transition-colors",
-            value === o.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            "rounded-full px-3.5 py-1 font-bold whitespace-nowrap transition-colors",
+            value === o.key ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground",
           )}
         >
           {o.label}

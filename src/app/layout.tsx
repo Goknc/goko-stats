@@ -4,6 +4,8 @@ import { AppHeader } from "@/components/app-header";
 import { SiteFooter } from "@/components/site-footer";
 // Font (Outfit) projenin içinden (npm paketi): build sırasında Google Fonts'a bağlanmaya gerek kalmaz
 import "@fontsource-variable/outfit";
+import "@fontsource/anton";
+import "@fontsource-variable/caveat";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="tr" className="dark h-full antialiased">
+    <html lang="tr" className="h-full antialiased">
       <body className="flex min-h-full flex-col font-sans">
         <Suspense fallback={null}>
           <AppHeader />

@@ -37,7 +37,7 @@ export function DatePicker({ date, onChange }: { date: string; onChange: (d: str
       <button
         onClick={() => onChange(shiftDate(date, -1))}
         aria-label="Önceki gün"
-        className="rounded-md px-1.5 py-1 text-xl text-muted-foreground sm:px-2 hover:bg-secondary hover:text-foreground"
+        className="rounded-full px-1.5 py-0.5 text-2xl font-bold text-white/80 sm:px-2.5 hover:bg-white/15 hover:text-white"
       >
         ‹
       </button>
@@ -45,9 +45,9 @@ export function DatePicker({ date, onChange }: { date: string; onChange: (d: str
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           className={cn(
-            "flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm font-semibold sm:min-w-44 sm:px-3",
-            "transition-colors hover:border-primary/60",
-            isToday && "border-primary/50 text-primary",
+            "flex items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-white bg-white px-3 py-1.5 text-sm font-bold text-foreground sm:min-w-44",
+            "transition-transform hover:-rotate-1",
+            isToday && "border-[var(--yellow)] bg-[var(--yellow)]",
           )}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -87,7 +87,7 @@ export function DatePicker({ date, onChange }: { date: string; onChange: (d: str
       <button
         onClick={() => onChange(shiftDate(date, 1))}
         aria-label="Sonraki gün"
-        className="rounded-md px-1.5 py-1 text-xl text-muted-foreground sm:px-2 hover:bg-secondary hover:text-foreground"
+        className="rounded-full px-1.5 py-0.5 text-2xl font-bold text-white/80 sm:px-2.5 hover:bg-white/15 hover:text-white"
       >
         ›
       </button>

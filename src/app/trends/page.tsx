@@ -11,6 +11,7 @@ import { dayRange, formatLongDate, formatTime, matchDayKey, parseDateParam } fro
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MatchStrip } from "@/components/match-strip";
+import { StripGroup } from "@/components/strip-group";
 import { RatePercent } from "@/components/rate-percent";
 import { FilterSelect } from "@/components/filter-select";
 import { cn } from "@/lib/utils";
@@ -64,42 +65,46 @@ const byRate = (x: Pick, y: Pick) => y.rate - x.rate || y.sample - x.sample || b
 // showTrend: maça göre görünümde maç başlıkta olduğu için satırda trend adı gösterilir.
 // Geniş ekranda üç sütun (saat · maç · karneler); karnelerde etiket, maç şeridi (rakip logosu + skor, sığmazsa yana kayar), x/y ve yüzde alt alta hizalı.
 function PickRow({ pick, showTrend = false }: { pick: Pick; showTrend?: boolean }) {
+  // İki karnenin kutucukları aynı genişlikte ve alt alta dursun diye ikisi de en uzun karne kadar yer ayırır
+  const slots = Math.max(...pick.lines.map((l) => l.evidence.length));
   return (
-    <div className="grid gap-x-6 gap-y-3 border-t border-border py-4 first:border-t-0 first:pt-0 lg:grid-cols-[3rem_minmax(0,14rem)_minmax(0,1fr)] lg:items-center">
-      <span className="text-sm tabular-nums text-muted-foreground">{formatTime(pick.time)}</span>
-      <div className="min-w-0">
+    <div className="space-y-2 border-t-2 border-dashed border-border py-6 first:border-t-0 first:pt-0">
+      {/* Üst satır: saat · maç (ya da trend adı) · lig */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="poster rounded-full bg-foreground px-2.5 py-0.5 text-base tabular-nums text-white">{formatTime(pick.time)}</span>
         {showTrend ? (
-          <Badge variant="secondary">{pick.trendName}</Badge>
+          <Badge variant="secondary" className="h-7 px-3 text-sm">{pick.trendName}</Badge>
         ) : (
           <>
-            <Link href={`/matches/${pick.matchId}?date=${matchDayKey(pick.time)}`} className="font-semibold hover:text-primary">
+            <Link href={`/matches/${pick.matchId}?date=${matchDayKey(pick.time)}`} className="text-xl font-extrabold leading-tight hover:text-primary">
               {pick.match}
             </Link>
-            <div className="text-xs text-muted-foreground">{pick.league}</div>
+            <span className="text-sm text-muted-foreground">{pick.league}</span>
           </>
         )}
       </div>
-      <div className="space-y-2">
+      {/* Karneler: şeritler tam genişlikte, birlikte kayar (StripGroup) */}
+      <StripGroup className="space-y-1">
         {pick.lines.map((line) => (
           // Mobilde etiket, x/y ve yüzde üstte; şerit altta tam satır
           <div
             key={line.label}
-            className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_3.5rem_3rem]"
+            className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 lg:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_3.5rem_4.75rem]"
           >
-            <span className="min-w-0 truncate text-sm text-muted-foreground">
+            <span className="min-w-0 truncate font-semibold">
               {line.label}
-              {line.context && <span className="ml-1.5 text-xs">(rakip, bilgi)</span>}
+              {line.context && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(rakip, bilgi)</span>}
             </span>
-            <div className="order-last col-span-full min-w-0 sm:order-none sm:col-span-1">
-              <MatchStrip evidence={line.evidence} />
+            <div className="order-last col-span-full min-w-0 lg:order-none lg:col-span-1">
+              <MatchStrip evidence={line.evidence} slots={slots} />
             </div>
             <span className="text-right text-sm tabular-nums text-muted-foreground">
               {line.hits}/{line.total}
             </span>
-            <RatePercent rate={line.rate} className="text-right font-bold" />
+            <RatePercent rate={line.rate} className="poster text-right text-2xl font-normal" />
           </div>
         ))}
-      </div>
+      </StripGroup>
     </div>
   );
 }
@@ -181,7 +186,7 @@ export default async function RecommendationsPage({
   const filterLink = (trend?: string) => link(trend, sort);
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 p-4">
+    <main className="mx-auto w-full max-w-[92rem] space-y-9 px-4 py-8 sm:px-8 sm:py-12">
       <div>
         <h1 className="text-2xl font-bold">Günün trendleri</h1>
         <p className="text-muted-foreground">
@@ -207,14 +212,14 @@ export default async function RecommendationsPage({
           />
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Sırala:</span>
-            <div className="flex rounded-lg bg-secondary p-1">
+            <div className="flex rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)]">
               {SORTS.map((o) => (
                 <Link
                   key={o.key}
                   href={link(selected, o.key)}
                   className={cn(
-                    "rounded-md px-3 py-1 font-medium transition-colors",
-                    sort === o.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                    "rounded-full px-3.5 py-1 font-bold transition-colors",
+                    sort === o.key ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {o.label}

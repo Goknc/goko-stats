@@ -61,7 +61,7 @@ export function MatchStatsCard({ stats, homeId, awayId, homeName, awayName }: Ma
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
         <CardTitle className="text-xl">Maç istatistikleri</CardTitle>
         {available.length > 1 && (
-          <div role="tablist" className="flex rounded-lg bg-secondary p-1">
+          <div role="tablist" className="flex rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)]">
             {available.map((p) => (
               <button
                 key={p.key}
@@ -69,8 +69,8 @@ export function MatchStatsCard({ stats, homeId, awayId, homeName, awayName }: Ma
                 aria-selected={period === p.key}
                 onClick={() => setPeriod(p.key)}
                 className={cn(
-                  "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                  period === p.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  "rounded-full px-3.5 py-1 text-sm font-bold transition-colors",
+                  period === p.key ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {p.label}

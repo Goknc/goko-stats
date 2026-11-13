@@ -19,26 +19,33 @@ const HOW = [
 ];
 
 function ColumnTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">{children}</h2>;
+  return <h2 className="poster mb-4 w-fit -rotate-1 rounded-full bg-[var(--yellow)] px-3 py-0.5 text-sm text-foreground">{children}</h2>;
 }
 
 export function SiteFooter() {
   return (
-    <footer className="mt-12 border-t border-border bg-card/40">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-3">
+    // K-pop: siyah sahne, ekranı kaplayan gradyan logo, el yazısı not
+    <footer className="mt-20 overflow-hidden border-t-[3px] border-foreground bg-foreground text-white">
+      <div className="mx-auto max-w-[92rem] px-4 pt-10 sm:px-8">
+        <div className="relative w-fit">
+          <div className="poster stage-gradient bg-clip-text text-[clamp(4rem,17vw,15rem)] leading-[0.9] text-transparent">Gokostats</div>
+          <span className="marker absolute -right-2 -top-1 rotate-6 text-2xl text-[var(--yellow)] sm:text-4xl">stats 4ever ♥</span>
+        </div>
+      </div>
+      <div className="mx-auto grid max-w-[92rem] gap-10 px-4 py-12 sm:grid-cols-3 sm:px-8">
         <div>
-          <div className="mb-2 font-display text-xl font-bold italic tracking-tight">Gokostats</div>
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <ColumnTitle>Hakkında</ColumnTitle>
+          <p className="leading-relaxed text-white/70">
             Takım ve oyuncuların son maçlarındaki istatistiklerine dayanan futbol istatistik platformu.
           </p>
         </div>
 
         <div>
           <ColumnTitle>Sayfalar</ColumnTitle>
-          <ul className="grid grid-cols-2 gap-y-2 text-sm sm:grid-cols-1">
+          <ul className="poster grid grid-cols-2 gap-y-1 text-2xl sm:grid-cols-1">
             {LINKS.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="text-foreground/80 transition-colors hover:text-primary">
+                <Link href={l.href} className="text-white transition-colors hover:text-[var(--pink)]">
                   {l.label}
                 </Link>
               </li>
@@ -48,10 +55,10 @@ export function SiteFooter() {
 
         <div>
           <ColumnTitle>Nasıl çalışır</ColumnTitle>
-          <ul className="space-y-2 text-sm text-foreground/80">
+          <ul className="space-y-2 text-sm text-white/80">
             {HOW.map((h) => (
               <li key={h} className="flex gap-2">
-                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                <span className="shrink-0 text-[var(--pink)]" aria-hidden="true">♥</span>
                 {h}
               </li>
             ))}
@@ -59,8 +66,8 @@ export function SiteFooter() {
         </div>
       </div>
 
-      <div className="border-t border-border/60">
-        <p className="mx-auto max-w-7xl px-4 py-4 text-center text-xs text-muted-foreground/80">
+      <div className="border-t border-white/15">
+        <p className="mx-auto max-w-[92rem] px-4 py-4 text-center text-xs text-white/60">
           İstatistikler geçmiş maçlara dayanır ve yalnızca bilgi amaçlıdır.
         </p>
       </div>

@@ -43,11 +43,11 @@ export function BarChart({ bars, line, dir }: { bars: Bar[]; line: number; dir: 
           <div className="relative h-56">
             {/* Yatay kılavuz çizgileri */}
             {ticks.map((t) => (
-              <div key={t} className="absolute inset-x-0 border-t border-border/60" style={{ bottom: `${pct(t)}%` }} />
+              <div key={t} className="absolute inset-x-0 border-t border-dashed border-border" style={{ bottom: `${pct(t)}%` }} />
             ))}
             {/* Çizgi */}
-            <div className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-foreground/60" style={{ bottom: `${pct(line)}%` }}>
-              <span className="absolute -top-3 right-0 rounded bg-foreground px-1.5 text-xs font-bold tabular-nums text-background">
+            <div className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-[var(--purple)]" style={{ bottom: `${pct(line)}%` }}>
+              <span className="absolute -top-3 right-0 rounded-full bg-[var(--purple)] px-2 text-xs font-bold tabular-nums text-white">
                 {String(line).replace(".", ",")}
               </span>
             </div>
@@ -60,8 +60,8 @@ export function BarChart({ bars, line, dir }: { bars: Bar[]; line: number; dir: 
                     {b.value === 0 && <div className="mb-0.5 text-center text-xs font-bold tabular-nums text-muted-foreground">0</div>}
                     <div
                       className={cn(
-                        "flex items-start justify-center rounded-t-[4px] pt-1 text-xs font-bold tabular-nums text-white",
-                        ok ? "bg-hit-block" : "bg-miss-block",
+                        "flex items-start justify-center rounded-t-xl pt-1.5 text-xs font-bold tabular-nums text-foreground/80",
+                        ok ? "bg-[#9eecd0]" : "bg-[#ffb9d6]",
                       )}
                       style={{ height: b.value > 0 ? `${pct(b.value)}%` : "3px" }}
                     >

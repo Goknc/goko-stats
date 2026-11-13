@@ -109,7 +109,7 @@ export function SearchBox({ placeholder = "Takım veya oyuncu ara", pickParam, c
   return (
     <div ref={boxRef} className={cn("relative", className)}>
       <svg
-        className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-foreground"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -133,13 +133,13 @@ export function SearchBox({ placeholder = "Takım veya oyuncu ara", pickParam, c
         aria-autocomplete="list"
         aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
         aria-label={placeholder}
-        className="h-9 w-full rounded-lg border border-border bg-secondary/60 pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/60 focus:bg-background"
+        className="h-10 w-full rounded-full border-2 border-foreground bg-white pr-3 pl-9 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--pink)]"
       />
       {showList && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute top-full right-0 left-0 z-30 mt-1 max-h-96 min-w-64 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-xl"
+          className="absolute top-full right-0 left-0 z-30 mt-1 max-h-96 min-w-64 overflow-y-auto rounded-2xl border-2 border-foreground bg-popover p-1 text-foreground shadow-[5px_5px_0_var(--purple)]"
         >
           {hits.length === 0 && (
             <li className="px-3 py-2 text-sm text-muted-foreground">{loading ? "Aranıyor…" : "Sonuç yok"}</li>

@@ -1,43 +1,48 @@
 // Maç şeridi: form şeridinin geniş hali. Her kutucukta rakibin logosu ve takımın gözünden skor;
-// trend tuttuysa yeşil, tutmadıysa kırmızı, veri yoksa gri. Soldan sağa eskiden yeniye, en sağdaki en son maç.
-// Sığmazsa yana kayar; flex-row-reverse sayesinde kaydırma en sağdan (en yeni maçtan) başlar, JS gerekmez.
+// trend tuttuysa nane yeşili, tutmadıysa pembe, veri yoksa gri. SOLDAN SAĞA YENİDEN ESKİYE: en soldaki en son maç.
+// Kutucuklar esner (10-15-20 maç alana yayılır); sığmazsa yana kayar ve kaydırma soldan, en yeni maçtan başlar.
+// StripGroup içindeyse aynı gruptaki şeritler birlikte kayar.
 import Link from "next/link";
 import { TeamLogo } from "@/components/entity-image";
 import type { EvidenceRow } from "@/lib/analysis";
 import { cn } from "@/lib/utils";
 
-export function MatchStrip({ evidence }: { evidence: EvidenceRow[] }) {
+// slots: şeridin ayıracağı kutucuk sayısı (alt alta iki şerit hizalı kalsın diye); eksikler boş yer tutar
+export function MatchStrip({ evidence, slots = 0 }: { evidence: EvidenceRow[]; slots?: number }) {
   const hits = evidence.filter((e) => e.outcome === true).length;
   const total = evidence.filter((e) => e.outcome !== null).length;
 
   return (
     <div
-      className="flex flex-row-reverse gap-1 overflow-x-auto pb-1 [scrollbar-width:thin]"
+      data-strip
+      className="pop-scroll flex gap-1 overflow-x-auto pb-2 pl-0.5 pr-1.5 pt-2"
       role="img"
       aria-label={`${total} maçın ${hits} tanesinde gerçekleşti`}
     >
-      {/* evidence en yeniden eskiye gelir; row-reverse ile en yeni en sağda */}
-      {evidence.map((e) => (
+      {/* evidence en yeniden eskiye gelir */}
+      {evidence.map((e, i) => (
         <Link
           key={e.matchId}
           href={`/matches/${e.matchId}`}
           title={e.label}
           className={cn(
-            "flex w-10 shrink-0 flex-col items-center gap-0.5 rounded-md px-0.5 py-1 ring-1 ring-inset transition-opacity hover:opacity-80",
-            e.outcome === null
-              ? "bg-unknown/30 ring-unknown/50"
-              : e.outcome
-                ? "bg-hit-block/25 ring-hit-block/60"
-                : "bg-miss-block/25 ring-miss-block/60",
+            // K-pop: mini photocard. Üstüne gelince eğilir.
+            "relative flex min-w-[38px] max-w-14 flex-1 basis-0 flex-col items-center gap-0.5 rounded-xl border-2 border-foreground px-0.5 pb-1 pt-1.5 transition-transform hover:-translate-y-1 hover:-rotate-3",
+            e.outcome === null ? "bg-unknown" : e.outcome ? "bg-[#b9f5df]" : "bg-[#ffc2dc]",
           )}
         >
           {e.opponentId !== undefined ? (
-            <TeamLogo id={e.opponentId} name={e.opponentName ?? ""} size={18} />
+            <TeamLogo id={e.opponentId} name={e.opponentName ?? ""} size={24} />
           ) : (
-            <span className="size-4.5" />
+            <span className="size-6" />
           )}
-          <span className="text-[11px] font-semibold leading-none tabular-nums">{e.score ?? "–"}</span>
+          <span className="poster text-sm leading-none tabular-nums">{e.score ?? "–"}</span>
+          {/* En yeni maç işareti */}
+          {i === 0 && <span className="absolute -right-1 -top-1.5 size-3 rounded-full border-2 border-foreground bg-[var(--yellow)]" />}
         </Link>
+      ))}
+      {Array.from({ length: Math.max(0, slots - evidence.length) }, (_, i) => (
+        <span key={`bos-${i}`} className="min-w-[38px] max-w-14 flex-1 basis-0 border-2 border-transparent" aria-hidden="true" />
       ))}
     </div>
   );

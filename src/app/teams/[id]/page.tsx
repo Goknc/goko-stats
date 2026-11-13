@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 function AvgTile({ label, value, tone }: { label: string; value: number | null; tone?: string }) {
   return (
-    <div className="rounded-lg bg-secondary/60 px-3 py-3 text-center">
+    <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-3 text-center">
       <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={cn("mt-1 text-2xl font-extrabold tabular-nums sm:text-3xl", tone)}>{fmt(value)}</div>
     </div>
@@ -244,26 +244,31 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
   const playerLine = lineParam > 0 ? lineParam : defaultLine(chosen?.avg ?? null);
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 p-4">
+    <main className="mx-auto w-full max-w-[92rem] space-y-9 px-4 py-8 sm:px-8 sm:py-12">
       {/* Başlık */}
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex items-center gap-4">
-          <TeamLogo id={data.team.id} name={data.team.name} size={64} />
+      <header className="flex flex-wrap items-end justify-between gap-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
+          {/* Büyük logo photocard'ı */}
+          <span className="photocard size-36 -rotate-3 border-[3px] shadow-[8px_8px_0_var(--blue)] transition-transform hover:rotate-0 sm:size-48">
+            <TeamLogo id={data.team.id} name={data.team.name} size={140} className="size-24 sm:size-36" />
+          </span>
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">{data.team.name}</h1>
-            <Link href={`/compare?a=${data.team.id}`} className="text-sm text-muted-foreground hover:text-primary">
-              Başka bir takımla karşılaştır →
-            </Link>
-            {data.league && (
-              <p className="flex items-center gap-1.5 text-muted-foreground">
-                <LeagueLogo id={data.league.id} name={data.league.name} size={16} />
-                {data.league.name}
-              </p>
-            )}
+            <div className="mt-4 flex flex-wrap items-center gap-2 font-bold">
+              {data.league && (
+                <span className="flex items-center gap-2 rounded-full border-2 border-foreground bg-[var(--lilac)] px-3 py-1">
+                  <LeagueLogo id={data.league.id} name={data.league.name} size={22} />
+                  {data.league.name}
+                </span>
+              )}
+              <Link href={`/compare?a=${data.team.id}`} className="pop rounded-full bg-white px-3 py-1">
+                Başka bir takımla karşılaştır →
+              </Link>
+            </div>
           </div>
         </div>
         {tab === "takim" && metrics.rows.length > 0 && (
-          <div className="flex gap-4 text-center">
+          <div className="tiles flex gap-3 text-center">
             {(
               [
                 ["Maç", metrics.rows.length, ""],
@@ -272,9 +277,9 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
                 ["M", metrics.record.L, "text-miss"],
               ] as const
             ).map(([label, value, tone]) => (
-              <div key={label}>
-                <div className="text-xs text-muted-foreground">{label}</div>
-                <div className={cn("text-xl font-bold tabular-nums", tone)}>{value}</div>
+              <div key={label} className="tile min-w-16 rounded-2xl border-[2.5px] border-foreground bg-white px-3 py-2">
+                <div className="poster text-sm text-muted-foreground">{label}</div>
+                <div className={cn("poster text-4xl leading-none tabular-nums", tone)}>{value}</div>
               </div>
             ))}
           </div>
@@ -282,15 +287,15 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
       </header>
 
       {/* Sekmeler */}
-      <nav className="flex gap-1 border-b border-border">
+      <nav className="flex flex-wrap gap-2.5">
         {(playersAvailable ? (["takim", "oyuncu"] as const) : (["takim"] as const)).map((key) => (
           <Link
             key={key}
             href={href({ tab: key })}
             scroll={false}
             className={cn(
-              "px-3 py-2 font-display font-semibold text-muted-foreground transition-colors hover:text-foreground",
-              tab === key && "text-foreground shadow-[inset_0_-2px_0_var(--primary)]",
+              "poster rounded-full border-2 border-foreground px-5 py-1.5 text-xl transition-transform hover:-rotate-1",
+              tab === key ? "-rotate-1 bg-[var(--yellow)] shadow-[3px_3px_0_var(--pink)]" : "bg-white",
             )}
           >
             {key === "takim" ? "Takım istatistikleri" : "Oyuncu istatistikleri"}

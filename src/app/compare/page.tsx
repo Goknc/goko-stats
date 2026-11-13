@@ -46,7 +46,7 @@ export const metadata = { title: { absolute: "Karşılaştır · Gokostats" } };
 
 function TeamSlot({ team, param }: { team: { id: number; name: string; league: { id: number; name: string } | null } | null; param: "a" | "b" }) {
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+    <div className="space-y-3 rounded-3xl border-[2.5px] border-foreground bg-card shadow-[5px_5px_0_var(--ink)] p-4">
       {team ? (
         <Link href={`/teams/${team.id}`} className="flex items-center gap-3 hover:text-primary">
           <TeamLogo id={team.id} name={team.name} size={48} />
@@ -139,7 +139,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   const h2h = ready ? await loadHeadToHead(dataA.team.id, dataB.team.id, new Date(), h2hFilter) : null;
 
   return (
-    <main className="mx-auto w-full max-w-5xl space-y-4 p-4">
+    <main className="mx-auto w-full max-w-[76rem] space-y-9 px-4 py-8 sm:px-8 sm:py-12">
       <div>
         <h1 className="text-2xl font-bold">Karşılaştır</h1>
         <p className="text-muted-foreground">İki takımın son maçlarını yan yana incele</p>
@@ -178,7 +178,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
                 { data: dataA, p: pa },
                 { data: dataB, p: pb },
               ].map(({ data, p }) => (
-                <div key={data.team.id} className="space-y-2 rounded-lg bg-secondary/40 p-3">
+                <div key={data.team.id} className="space-y-2 rounded-2xl border-2 border-foreground bg-secondary p-3">
                   <div className="flex items-center gap-2 font-semibold">
                     <TeamLogo id={data.team.id} name={data.team.name} size={20} />
                     {data.team.name}

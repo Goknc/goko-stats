@@ -37,20 +37,20 @@ export function TeamTrendGrid({ trends, home, away }: TeamTrendGridProps) {
         if (!items.length) return null;
         return (
           <section key={group} className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">{group}</h3>
+            <h3 className="poster text-xl text-foreground">{group}</h3>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {items.map((m) => (
                 <div
                   key={m.code}
                   className={cn(
-                    "space-y-4 rounded-xl border border-border bg-background/40 p-4",
-                    m.recommended && "border-primary/50 bg-primary/5",
+                    "space-y-4 rounded-2xl border-2 border-foreground bg-white p-4",
+                    m.recommended && "bg-[#fff6c2] shadow-[5px_5px_0_var(--pink)]",
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold">{m.name}</span>
+                        <span className="poster text-2xl leading-none">{m.name}</span>
                         {m.recommended && <Badge>Öne çıkan</Badge>}
                       </div>
                       <div className="text-xs text-muted-foreground">eşik %{Math.round(m.threshold * 100)}</div>
@@ -74,8 +74,8 @@ function SideRow({ team, s, threshold, info }: { team: Team; s: RateSummary; thr
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5 text-sm">
-          <TeamLogo id={team.id} name={team.name} size={16} />
-          <span className="truncate font-medium">{team.name}</span>
+          <TeamLogo id={team.id} name={team.name} size={22} />
+          <span className="truncate font-bold">{team.name}</span>
           <span className="shrink-0 text-xs text-muted-foreground">
             · {team.label}
             {info && " · bilgi"}
@@ -90,18 +90,18 @@ function SideRow({ team, s, threshold, info }: { team: Team; s: RateSummary; thr
           ) : s.lowSample ? (
             <span className="text-sm text-muted-foreground">az örnek</span>
           ) : (
-            <RatePercent rate={s.rate} className={cn("text-lg font-extrabold", passes && "text-hit")} />
+            <RatePercent rate={s.rate} className={cn("poster text-2xl font-normal", passes && s.rate !== null && s.rate < 0.9 && "text-hit")} />
           )}
         </span>
       </div>
       {/* Oran çubuğu: dikey çizgi eşik */}
-      <div className="relative h-1.5 rounded-full bg-secondary">
+      <div className="relative h-3 rounded-full border-2 border-foreground bg-white">
         <div
-          className={cn("h-full rounded-full", passes ? "bg-hit" : "bg-muted-foreground/50")}
+          className={cn("h-full rounded-full", passes ? "bg-hit-block" : "bg-[var(--lilac)]")}
           style={{ width: `${Math.round((s.rate ?? 0) * 100)}%` }}
         />
         <div
-          className="absolute -top-0.75 h-3 w-0.5 rounded-full bg-foreground/80"
+          className="absolute -top-1.5 h-5 w-1 rounded-full bg-foreground"
           style={{ left: `${Math.round(threshold * 100)}%` }}
           title={`eşik %${Math.round(threshold * 100)}`}
         />

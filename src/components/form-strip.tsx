@@ -28,8 +28,8 @@ export function FormStrip({ outcomes, labels, size = "md" }: FormStripProps) {
           key={i}
           title={item.label}
           className={cn(
-            "flex items-center justify-center rounded-[3px] text-white",
-            size === "sm" ? "size-3.5" : size === "auto" ? "size-3.5 xl:size-4" : "size-4",
+            "flex items-center justify-center rounded-md text-white",
+            size === "sm" ? "size-4" : size === "auto" ? "size-4 xl:size-5" : "size-5",
             item.outcome === null ? "bg-unknown" : item.outcome ? "bg-hit-block" : "bg-miss-block",
           )}
         >

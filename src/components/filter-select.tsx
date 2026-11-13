@@ -25,8 +25,8 @@ export function FilterSelect({ label, groups, selected }: { label: string; group
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          "group flex items-center gap-2.5 rounded-xl border border-border bg-card py-1.5 pl-3 pr-2 text-sm transition-colors",
-          "hover:border-primary/60 data-[state=open]:border-primary",
+          "pop group flex items-center gap-2.5 rounded-full bg-card py-1.5 pl-4 pr-2.5 text-sm",
+          "data-[state=open]:bg-[var(--yellow)]",
         )}
       >
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</span>

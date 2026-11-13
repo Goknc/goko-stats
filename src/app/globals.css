@@ -7,10 +7,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Font: Outfit (tweakcn Supabase teması), projenin içinden: @fontsource-variable/outfit */
+  /* K-pop: gövde Outfit, poster başlıkları Anton, el yazısı sticker'lar Caveat; hepsi @fontsource, latin-ext */
   --font-sans: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Anton", Impact, sans-serif;
+  --font-display: "Anton", Impact, sans-serif;
+  --font-marker: "Caveat Variable", cursive;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   /* Form şeridi ve vurgu renkleri: bg-hit, text-miss, text-magenta... */
   --color-hit: var(--hit);
@@ -67,72 +68,319 @@
   --shadow-lg: var(--shadow-lg);
 }
 
-/* tweakcn "Supabase" teması (koyu) tabanlı. Ana yeşil #17b169; takımlar mavi #004687 / kırmızı #c8102e. */
+/* ===== K-pop teması =====
+   Lila zemin, siyah kalın çerçeveli "photocard" kartlar, renkli sert gölgeler (mor/pembe/mavi/sarı sırayla),
+   dev poster fontu (Anton), sarı fosforlu kalem vurguları, el yazısı sticker'lar (Caveat). */
 :root,
 .dark {
-  --background: oklch(0.1822 0 0);
-  --foreground: oklch(0.9288 0.0126 255.5078);
-  --card: oklch(0.2046 0 0);
-  --card-foreground: oklch(0.9288 0.0126 255.5078);
-  --popover: oklch(0.2603 0 0);
-  --popover-foreground: oklch(0.7348 0 0);
-  --primary: #17b169;
-  --primary-foreground: #04170d;
-  --secondary: oklch(0.2603 0 0);
-  --secondary-foreground: oklch(0.9851 0 0);
-  --muted: oklch(0.2393 0 0);
-  --muted-foreground: oklch(0.7122 0 0);
-  --accent: oklch(0.3132 0 0);
-  --accent-foreground: oklch(0.9851 0 0);
-  --destructive: oklch(0.3123 0.0852 29.7877);
-  --destructive-foreground: oklch(0.9368 0.0045 34.3092);
-  --border: oklch(0.2809 0 0);
-  --input: oklch(0.2603 0 0);
-  --ring: #17b169;
-  --chart-1: #17b169;
-  --chart-2: oklch(0.7137 0.1434 254.624);
-  --chart-3: oklch(0.709 0.1592 293.5412);
-  --chart-4: oklch(0.8369 0.1644 84.4286);
-  --chart-5: oklch(0.7845 0.1325 181.912);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.1822 0 0);
-  --sidebar-foreground: oklch(0.6301 0 0);
-  --sidebar-primary: #17b169;
-  --sidebar-primary-foreground: #04170d;
-  --sidebar-accent: oklch(0.3132 0 0);
-  --sidebar-accent-foreground: oklch(0.9851 0 0);
-  --sidebar-border: oklch(0.2809 0 0);
-  --sidebar-ring: #17b169;
+  --background: #efe6ff;
+  --foreground: #0e0a17;
+  --card: #ffffff;
+  --card-foreground: #0e0a17;
+  --popover: #ffffff;
+  --popover-foreground: #0e0a17;
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --secondary: #f1e9ff;
+  --secondary-foreground: #0e0a17;
+  --muted: #f3edff;
+  --muted-foreground: #5f5478;
+  --accent: #e6d9ff;
+  --accent-foreground: #0e0a17;
+  --destructive: #ff2e7e;
+  --destructive-foreground: #ffffff;
+  --border: #d9c9f7;
+  --input: #0e0a17;
+  --ring: #7c3aed;
+  --chart-1: #7c3aed;
+  --chart-2: #ff4fa3;
+  --chart-3: #3d7bff;
+  --chart-4: #ffd60a;
+  --chart-5: #12c48b;
+  --radius: 1rem;
+  --sidebar: #efe6ff;
+  --sidebar-foreground: #5f5478;
+  --sidebar-primary: #7c3aed;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e6d9ff;
+  --sidebar-accent-foreground: #0e0a17;
+  --sidebar-border: #d9c9f7;
+  --sidebar-ring: #7c3aed;
 
   /* Uygulamaya özel */
-  --hit: #17b169; /* tuttu: ana yeşil */
-  --miss: oklch(0.68 0.16 25); /* tutmadı: yumuşak kırmızı */
-  --unknown: oklch(0.3132 0 0); /* veri yok */
-  --hit-block: #018749; /* tuttu kutusu */
-  --miss-block: #b31b1b; /* tutmadı kutusu */
-  --home: #004687; /* ev sahibi çubukları */
-  --home-text: #6fa8dc; /* ev sahibi yazı vurgusu (koyu mavi zeminde okunmaz, açık tonu) */
-  --away: #c8102e; /* deplasman çubukları */
-  --away-text: #f0607a; /* deplasman yazı vurgusu */
-  --magenta: var(--away-text); /* ikinci vurgu (krallık 1. sıra, sürpriz): deplasman kırmızısının açık tonu */
+  --hit: #0a9d6c; /* tuttu: nane yeşili (yazı) */
+  --miss: #e6176a; /* tutmadı: sıcak pembe (yazı) */
+  --unknown: #d9d2e8;
+  --hit-block: #12c48b;
+  --miss-block: #ff2e7e;
+  --home: #3d7bff; /* ev sahibi: mavi */
+  --home-text: #2457d6;
+  --away: #ff4fa3; /* deplasman: pembe */
+  --away-text: #d81b7a;
+  --magenta: #d81b7a;
 
-  --tracking-normal: 0.025em;
-  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 1px 2px -1px hsl(0 0% 0% / 0.17);
-  --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 1px 2px -1px hsl(0 0% 0% / 0.17);
-  --shadow-md: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 2px 4px -1px hsl(0 0% 0% / 0.17);
-  --shadow-lg: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 4px 6px -1px hsl(0 0% 0% / 0.17);
+  --ink: #0e0a17;
+  --purple: #7c3aed;
+  --lilac: #c4a7ff;
+  --pink: #ff4fa3;
+  --blue: #3d7bff;
+  --yellow: #ffe14d;
+  --mint: #12c48b;
+  --stage: linear-gradient(100deg, #7c3aed 0%, #ff4fa3 50%, #3d7bff 100%);
+
+  --tracking-normal: 0;
+  --shadow-sm: 2px 2px 0 var(--ink);
+  --shadow: 3px 3px 0 var(--ink);
+  --shadow-md: 5px 5px 0 var(--ink);
+  --shadow-lg: 8px 8px 0 var(--ink);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-    letter-spacing: var(--tracking-normal);
-  }
   html {
     @apply font-sans;
-    color-scheme: dark;
+    color-scheme: light;
+    font-size: 17px;
+  }
+  body {
+    @apply text-foreground;
+    /* Sahne ışıkları (renkli bulutlar) + noktalı baskı dokusu */
+    background-color: var(--background);
+    background-image:
+      radial-gradient(rgb(124 58 237 / 0.16) 1.5px, transparent 1.6px),
+      radial-gradient(46rem 34rem at 0% 0%, rgb(255 79 163 / 0.4), transparent 65%),
+      radial-gradient(44rem 34rem at 100% 12%, rgb(61 123 255 / 0.36), transparent 65%),
+      radial-gradient(40rem 30rem at 55% 100%, rgb(255 225 77 / 0.4), transparent 65%);
+    background-size: 22px 22px, auto, auto, auto;
+    background-attachment: fixed;
+  }
+  main {
+    counter-reset: section;
+  }
+  /* Sayfa başlığı: dev poster harfleri, pembe sert gölge, sonunda yıldız */
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400 !important;
+    text-transform: uppercase;
+    font-size: clamp(3rem, 9vw, 7.5rem) !important;
+    line-height: 0.92;
+    letter-spacing: 0.005em;
+    padding-bottom: 0.14em; /* Ş, Ç, Ğ kuyrukları alttaki yazıya değmesin */
+    text-shadow: 0.045em 0.045em 0 var(--pink);
+  }
+  h1::after {
+    content: " ✦";
+    color: var(--purple);
+    text-shadow: none;
+    font-size: 0.5em;
+    vertical-align: 0.5em;
+  }
+  ::selection {
+    background: var(--yellow);
+    color: var(--ink);
+  }
+}
+
+@layer components {
+  /* Kart = photocard: beyaz, kalın siyah çerçeve, renkli sert gölge. Renk kart sırasına göre döner. */
+  [data-slot="card"] {
+    --pop: var(--purple);
+    border: 2.5px solid var(--ink);
+    border-radius: 1.6rem !important;
+    box-shadow: 7px 7px 0 var(--pop) !important;
+    counter-increment: section;
+    font-size: 1rem;
+  }
+  [data-slot="card"]:nth-of-type(4n + 2) {
+    --pop: var(--pink);
+  }
+  [data-slot="card"]:nth-of-type(4n + 3) {
+    --pop: var(--blue);
+  }
+  [data-slot="card"]:nth-of-type(4n + 4) {
+    --pop: var(--yellow);
+  }
+  /* İç içe kartlar daha sakin */
+  [data-slot="card"] [data-slot="card"] {
+    box-shadow: 4px 4px 0 var(--pop) !important;
+    border-radius: 1.1rem !important;
+  }
+  /* Albüm parça listesi gibi: TRACK 01, TRACK 02... (eğik siyah sticker) */
+  [data-slot="card"] > [data-slot="card-header"]:first-child::before {
+    content: "TRACK " counter(section, decimal-leading-zero);
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: #fff;
+    background: var(--ink);
+    padding: 0.15rem 0.7rem 0.1rem;
+    border-radius: 9999px;
+    transform: rotate(-2deg);
+    box-shadow: 2px 2px 0 var(--pop);
+    position: absolute;
+    left: var(--card-spacing);
+    top: 0;
+    white-space: nowrap;
+  }
+  [data-slot="card"] > [data-slot="card-header"]:first-child {
+    position: relative;
+    padding-top: 2.1rem !important;
+  }
+  /* Başlık: poster harfleri + kartın rengiyle fosforlu kalem */
+  [data-slot="card-title"] {
+    font-family: var(--font-display);
+    font-weight: 400 !important;
+    text-transform: uppercase;
+    font-size: clamp(1.7rem, 3vw, 2.5rem) !important;
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    width: fit-content;
+    padding: 0 0.3rem;
+    margin-left: -0.3rem;
+    background: linear-gradient(transparent 58%, color-mix(in srgb, var(--pop) 55%, white) 58% 92%, transparent 92%);
+  }
+  [data-slot="popover-content"] {
+    border: 2.5px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--purple) !important;
+  }
+
+  /* Poster yazısı */
+  .poster {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 400;
+  }
+  /* El yazısı sticker */
+  .marker {
+    font-family: var(--font-marker);
+    font-weight: 700;
+  }
+  /* Siyah çerçeveli, sert gölgeli "pop" kutu: düğmeler, rozetler, seçiciler */
+  .pop {
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    transition:
+      transform 0.12s,
+      box-shadow 0.12s;
+  }
+  a.pop:hover,
+  button.pop:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+  a.pop:active,
+  button.pop:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  /* Logo çerçevesi: beyaz daire, siyah çerçeve, renkli gölge */
+  .photocard {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    background: #fff;
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--pop, var(--lilac));
+  }
+  /* Şık yatay kaydırma çubuğu: ince, gradyan başparmak */
+  .pop-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--pink) transparent;
+  }
+  .pop-scroll::-webkit-scrollbar {
+    height: 9px;
+  }
+  .pop-scroll::-webkit-scrollbar-track {
+    background: var(--secondary);
+    border-radius: 9999px;
+  }
+  .pop-scroll::-webkit-scrollbar-thumb {
+    background: var(--stage);
+    border: 2px solid var(--ink);
+    border-radius: 9999px;
+  }
+  @supports selector(::-webkit-scrollbar) {
+    .pop-scroll {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+  }
+  /* Yüzde vurguları */
+  .rate-hot {
+    color: var(--purple);
+  }
+  .rate-fire {
+    color: var(--miss-block);
+    font-size: 1.3em;
+    line-height: 1;
+    text-shadow: 2px 2px 0 var(--yellow), 3px 3px 0 var(--ink);
+    transform-origin: right center;
+    animation: rate-shake 2.4s ease-in-out infinite;
+  }
+  /* İstatistik kutuları: gölge rengi sırayla döner */
+  .tile {
+    box-shadow: 5px 5px 0 var(--purple);
+  }
+  .tiles > .tile:nth-child(4n + 2) {
+    box-shadow: 5px 5px 0 var(--pink);
+  }
+  .tiles > .tile:nth-child(4n + 3) {
+    box-shadow: 5px 5px 0 var(--blue);
+  }
+  .tiles > .tile:nth-child(4n + 4) {
+    box-shadow: 5px 5px 0 var(--yellow);
+  }
+  .stage-gradient {
+    background: var(--stage);
+  }
+  .marquee-track {
+    animation: marquee 38s linear infinite;
+  }
+  .wiggle:hover {
+    animation: wiggle 0.5s ease-in-out;
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+/* Çoğu zaman durur, arada bir titrer */
+@keyframes rate-shake {
+  0%, 78%, 100% {
+    transform: rotate(0) scale(1);
+  }
+  82% {
+    transform: rotate(-7deg) scale(1.12);
+  }
+  86% {
+    transform: rotate(6deg) scale(1.12);
+  }
+  90% {
+    transform: rotate(-4deg) scale(1.08);
+  }
+  94% {
+    transform: rotate(3deg) scale(1.04);
+  }
+}
+@keyframes wiggle {
+  25% {
+    transform: rotate(-6deg) scale(1.08);
+  }
+  75% {
+    transform: rotate(6deg) scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .wiggle:hover,
+  .rate-fire {
+    animation: none;
   }
 }
