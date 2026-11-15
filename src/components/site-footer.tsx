@@ -1,6 +1,7 @@
-// Tüm sayfaların altındaki footer: üç eşit sütun (proje · sayfalar · nasıl çalışır) ve bilgilendirme notu.
+// Tüm sayfaların altındaki footer: üç eşit sütun (hakkında · sayfalar · nasıl çalışır) ve bilgilendirme notu.
 // Sayfa kısa olsa da en altta durması için layout'ta gövde flex-col + içerik flex-1 olmalı.
 import Link from "next/link";
+import { Logo, StatsMark } from "@/components/logo";
 
 const LINKS = [
   { href: "/", label: "Maçlar" },
@@ -11,11 +12,11 @@ const LINKS = [
 ];
 
 const HOW = [
-  "Maç sonuçları ve istatistikler her gün, kadrolar maç öncesi birkaç saatte bir güncellenir",
-  "Yüzdeler takımın ve oyuncunun son maçlarına dayanır; maç sayısı, saha ve turnuva sayfada seçilebilir",
-  "Oyuncu ortalamaları ve oranları yalnızca ilk 11'de başladığı maçlardan hesaplanır",
-  "Seriler oynadığı son maçlardan geriye sayılır; 3 maç ve üstü gösterilir",
-  "Mevki kıyası ve krallıklar güncel sezona dayanır; ortalamalarda en az maç şartı vardır",
+  "Maç sonuçları ve istatistikler her gün, kadrolar maçtan önce birkaç saatte bir güncellenir.",
+  "Yüzdeler takımın ve oyuncunun son maçlarına dayanır; maç sayısı, saha, turnuva ve eşik sayfadan seçilebilir.",
+  "Oyuncu ortalamaları ve oranları yalnızca ilk 11'de başladığı maçlardan hesaplanır.",
+  "Seriler oyuncunun son maçından geriye doğru sayılır; 3 maç ve üzeri seriler gösterilir.",
+  "Mevki kıyaslamaları ve krallıklar güncel sezona dayanır; ortalamalarda en az maç şartı aranır.",
 ];
 
 function ColumnTitle({ children }: { children: React.ReactNode }) {
@@ -24,19 +25,15 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
 
 export function SiteFooter() {
   return (
-    // K-pop: siyah sahne, ekranı kaplayan gradyan logo, el yazısı not
-    <footer className="mt-20 overflow-hidden border-t-[3px] border-foreground bg-foreground text-white">
-      <div className="mx-auto max-w-[92rem] px-4 pt-10 sm:px-8">
-        <div className="relative w-fit">
-          <div className="poster stage-gradient bg-clip-text text-[clamp(4rem,17vw,15rem)] leading-[0.9] text-transparent">Gokostats</div>
-          <span className="marker absolute -right-2 -top-1 rotate-6 text-2xl text-[var(--yellow)] sm:text-4xl">stats 4ever ♥</span>
-        </div>
-      </div>
+    <footer className="mt-20 border-t-[3px] border-foreground bg-foreground text-white">
       <div className="mx-auto grid max-w-[92rem] gap-10 px-4 py-12 sm:grid-cols-3 sm:px-8">
         <div>
+          <Link href="/" aria-label="Gokostats ana sayfa" className="mb-6 inline-block">
+            <Logo />
+          </Link>
           <ColumnTitle>Hakkında</ColumnTitle>
           <p className="leading-relaxed text-white/70">
-            Takım ve oyuncuların son maçlarındaki istatistiklerine dayanan futbol istatistik platformu.
+            Gokostats, takımların ve oyuncuların son maçlarındaki istatistikleri bir araya getiren bir futbol istatistik sitesidir.
           </p>
         </div>
 
@@ -55,10 +52,10 @@ export function SiteFooter() {
 
         <div>
           <ColumnTitle>Nasıl çalışır</ColumnTitle>
-          <ul className="space-y-2 text-sm text-white/80">
+          <ul className="space-y-2.5 text-sm text-white/80">
             {HOW.map((h) => (
-              <li key={h} className="flex gap-2">
-                <span className="shrink-0 text-[var(--pink)]" aria-hidden="true">♥</span>
+              <li key={h} className="flex gap-2.5">
+                <StatsMark className="mt-0.5 size-4" />
                 {h}
               </li>
             ))}
@@ -67,8 +64,9 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/15">
-        <p className="mx-auto max-w-[92rem] px-4 py-4 text-center text-xs text-white/60">
-          İstatistikler geçmiş maçlara dayanır ve yalnızca bilgi amaçlıdır.
+        <p className="mx-auto max-w-[92rem] px-4 py-4 text-center text-xs leading-relaxed text-white/60">
+          Buradaki istatistikler geçmiş maçlara dayanır ve yalnızca bilgi amaçlıdır; hiçbir içerik bahis tavsiyesi değildir. Gokostats,
+          futbola duyduğum ilgiyle geliştirdiğim kişisel bir projedir.
         </p>
       </div>
     </footer>

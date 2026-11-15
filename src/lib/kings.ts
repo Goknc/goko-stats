@@ -9,6 +9,7 @@ import { cached } from "./ttl-cache";
 import { canonicalLeagueId } from "./engine/leagues";
 import { rankKings, type KingRow, type KingSort, type KingTotal } from "./engine/king-board";
 import { byLeaguePopularity } from "./league-order";
+import { trLeague, trTeam } from "./team-names";
 
 // Her tabloda en fazla bu kadar sıra gösterilir (eşitlikte biraz fazlası)
 export const KING_MAX_ROWS = 50;
@@ -63,7 +64,7 @@ export const kingStat = (key: KingStatKey): KingStatDef => KING_STATS.find((s) =
 
 export const KING_SORTS: { key: KingSort; label: string }[] = [
   { key: "total", label: "Toplam" },
-  { key: "perMatch", label: "Maç başı" },
+  { key: "perMatch", label: "Maç başına" },
 ];
 export const isKingSort = (v: unknown): v is KingSort => KING_SORTS.some((s) => s.key === v);
 
@@ -101,7 +102,7 @@ export function kingLeagues(): Promise<KingLeague[]> {
       const id = canonicalLeagueId(r.id);
       const prev = merged.get(id);
       if (prev) prev.matches += r.matches;
-      else merged.set(id, { id, name: r.name, seasonName: r.seasonName, matches: r.matches });
+      else merged.set(id, { id, name: trLeague(r.name), seasonName: r.seasonName, matches: r.matches });
     }
     return [...merged.values()].sort((a, b) => byLeaguePopularity(a.name, b.name));
   });
@@ -180,7 +181,7 @@ export function kingBoard(
       sort,
       decimals: !!stat.decimals,
       averageOnly: !!stat.averageOnly,
-      rows: rankKings(rows, KING_MAX_ROWS, sort),
+      rows: rankKings(rows.map((r) => ({ ...r, teamName: trTeam(r.teamName) })), KING_MAX_ROWS, sort),
       minMatches: sort === "perMatch" ? (rows[0]?.minMatches ?? null) : null,
     };
   });

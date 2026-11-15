@@ -1,6 +1,6 @@
 // Oyuncu kartı: seçilen trendde (Gol 1+, Faul 2+...) kayıt, isabet, ortalama ve maç maç sütunlar.
 // Sütunlar soldan sağa eskiden yeniye; açılışta en yeni maça kaydırılır.
-// Yalnızca karneye sayılan ilk 11 maçları (60+ dk kuralı). Yeşil = çizgiyi geçti, kırmızı = geçmedi.
+// Yalnızca karneye sayılan ilk 11 maçları (60+ dk kuralı). Yeşil = sayıya ulaştı, pembe = ulaşamadı.
 // Oyuncu takım değiştirdiyse sütunlar takıma göre gruplanır, araya çizgi çekilir.
 "use client";
 
@@ -36,7 +36,8 @@ interface PlayerCardProps {
   trends: CardTrend[];
   defaultCode: string;
   featured?: string[]; // hızlı geçiş düğmeleri (öne çıkan ya da en çok tutan trendler)
-  badge?: string; // ismin yanında küçük etiket ("2 öne çıkan", "az veri")
+  badge?: string; // ismin yanında küçük etiket ("2 öne çıkan", "Az veri")
+  highlight?: boolean; // öne çıkan trendi olan oyuncu: sarı zemin, pembe gölge
   injury?: string | null; // "Sakat · Hamstring"
   className?: string;
 }
@@ -57,14 +58,14 @@ const formatDate = (t: number) => new Date(t).toLocaleDateString("tr-TR", { time
 function Stat({ label, value, className }: { label: string; value: ReactNode; className?: string }) {
   return (
     <div className="text-right">
-      <div className={cn("text-xl font-extrabold tabular-nums leading-none sm:text-2xl", className)}>{value}</div>
+      <div className={cn("poster text-2xl tabular-nums leading-none sm:text-3xl", className)}>{value}</div>
       <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
     </div>
   );
 }
 
 export function PlayerCard({
-  playerId, name, position, teamId, teamName, games, trends, defaultCode, featured = [], badge, injury, className,
+  playerId, name, position, teamId, teamName, games, trends, defaultCode, featured = [], badge, highlight, injury, className,
 }: PlayerCardProps) {
   const [code, setCode] = useState(defaultCode);
   const [showAll, setShowAll] = useState(false);
@@ -106,38 +107,46 @@ export function PlayerCard({
   const passes = !trend.lowSample && trend.rate !== null && trend.rate >= trend.threshold;
 
   return (
-    <div className={cn("overflow-hidden rounded-2xl border border-border bg-linear-to-b from-card to-background/60", className)}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border-2 border-foreground bg-white",
+        highlight && "bg-[#fffbe0] shadow-[5px_5px_0_var(--pink)]",
+        className,
+      )}
+    >
       {/* Üst: oyuncu + trend seçici */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="relative">
-            <PlayerPhoto id={playerId} name={name} size={52} className="ring-2 ring-border" />
+            <span className="photocard overflow-hidden">
+              <PlayerPhoto id={playerId} name={name} size={56} />
+            </span>
             {position && POSITIONS[position] && (
-              <span className="absolute -bottom-1 -left-1 rounded-full border border-border bg-background px-1.5 text-[10px] font-bold">
+              <span className="absolute -bottom-1 -left-1.5 rounded-full border-[1.5px] border-foreground bg-[var(--yellow)] px-1.5 text-[10px] font-bold">
                 {POSITIONS[position]}
               </span>
             )}
-            <span className="absolute -right-1 -bottom-1 rounded-full bg-background p-0.5">
+            <span className="absolute -right-1.5 -bottom-1 rounded-full border-[1.5px] border-foreground bg-white p-0.5">
               <TeamLogo id={teamId} name={teamName} size={16} />
             </span>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Link href={`/players/${playerId}`} className="truncate text-lg font-bold leading-tight hover:text-primary">{name}</Link>
+              <Link href={`/players/${playerId}`} className="truncate text-xl font-extrabold leading-tight hover:text-primary">{name}</Link>
               {badge && (
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                    badge === "az veri" ? "bg-secondary text-muted-foreground" : "bg-primary/15 text-primary",
+                    "shrink-0 rounded-full border-[1.5px] border-foreground px-2 py-0.5 text-[11px] font-bold",
+                    badge === "Az veri" ? "bg-secondary text-muted-foreground" : "bg-[var(--yellow)]",
                   )}
                 >
                   {badge}
                 </span>
               )}
             </div>
-            <div className="truncate text-sm text-primary">{teamName}</div>
+            <div className="truncate text-sm font-semibold text-muted-foreground">{teamName}</div>
             {injury && (
-              <span className="mt-1 inline-block rounded-full border border-miss/50 bg-miss/10 px-2 py-0.5 text-[11px] font-semibold text-miss">
+              <span className="mt-1 inline-block rounded-full border-[1.5px] border-foreground bg-[#ffc2dc] px-2 py-0.5 text-[11px] font-bold">
                 {injury}
               </span>
             )}
@@ -149,7 +158,7 @@ export function PlayerCard({
             value={trend.code}
             onChange={(e) => setCode(e.target.value)}
             aria-label="Trend"
-            className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm font-medium"
+            className="rounded-full border-2 border-foreground bg-white px-3 py-1.5 text-sm font-bold shadow-[2px_2px_0_var(--ink)]"
           >
             {trends.map((m) => (
               <option key={m.code} value={m.code}>
@@ -172,8 +181,8 @@ export function PlayerCard({
                 type="button"
                 onClick={() => setCode(c)}
                 className={cn(
-                  "rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
-                  c === trend.code ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground",
+                  "rounded-full border-2 px-2.5 py-0.5 text-xs font-bold transition-colors",
+                  c === trend.code ? "border-foreground bg-foreground text-white" : "border-foreground/30 bg-white text-muted-foreground hover:border-foreground hover:text-foreground",
                 )}
               >
                 {m.name} {pct(m.rate)}
@@ -186,24 +195,24 @@ export function PlayerCard({
       {/* Başlık + özet */}
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 px-4 pt-4">
         <div>
-          <div className="text-lg font-extrabold uppercase tracking-wide text-primary">{trend.name}</div>
-          <div className="text-xs text-muted-foreground">
-            eşik {pct(trend.threshold)}
-            {trend.lowSample && " · az örnek"}
+          <div className="poster text-2xl leading-none text-[var(--purple)]">{trend.name}</div>
+          <div className="mt-1 text-xs font-medium text-muted-foreground">
+            Eşik {pct(trend.threshold)}
+            {trend.lowSample && " · az maç"}
           </div>
         </div>
         <div className="flex gap-5 sm:gap-7">
-          <Stat label="Kayıt" value={`${trend.hits}/${trend.total}`} className={passes ? "text-hit" : undefined} />
-          <Stat label="İsabet" value={pct(trend.rate)} className={passes ? "text-hit" : undefined} />
+          <Stat label="Maç" value={`${trend.hits}/${trend.total}`} className={passes ? "text-hit" : undefined} />
+          <Stat label="Oran" value={pct(trend.rate)} className={passes ? "text-hit" : undefined} />
           <Stat label="Ort." value={avg === null ? "–" : avg.toFixed(2)} />
         </div>
       </div>
 
       {/* Maç sütunları */}
-      <div ref={scroller} className="mt-4 overflow-x-auto px-4 pb-3 scrollbar-thin">
+      <div ref={scroller} className="pop-scroll mt-4 overflow-x-auto px-4 pb-3">
         <div className="flex w-max gap-3">
           {groups.map((grp, gi) => (
-            <div key={gi} className={cn("flex flex-col gap-1.5", gi > 0 && "border-l-2 border-dashed border-primary/50 pl-3")}>
+            <div key={gi} className={cn("flex flex-col gap-1.5", gi > 0 && "border-l-2 border-dashed border-foreground/40 pl-3")}>
               {transferred && (
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
                   <TeamLogo id={grp.teamId} name={grp.teamName} size={14} />
@@ -223,13 +232,13 @@ export function PlayerCard({
       </div>
 
       {/* Alt: açıklama + tüm trendler */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t-2 border-dashed border-border px-4 py-2 text-xs font-medium text-muted-foreground">
         <span className="flex flex-wrap items-center gap-3">
-          <Legend className="bg-hit-block" text="geçti" />
-          <Legend className="bg-miss-block" text="geçmedi" />
+          <Legend className="bg-[#b9f5df]" text={`${trend.line}+ yaptı`} />
+          <Legend className="bg-[#ffc2dc]" text="Yapamadı" />
         </span>
-        <button type="button" onClick={() => setShowAll((v) => !v)} className="hover:text-foreground">
-          {showAll ? "Gizle" : "Tüm trendler"}
+        <button type="button" onClick={() => setShowAll((v) => !v)} className="font-bold underline hover:text-foreground">
+          {showAll ? "Gizle" : "Tüm istatistikler"}
         </button>
       </div>
       {showAll && (
@@ -240,8 +249,8 @@ export function PlayerCard({
               type="button"
               onClick={() => setCode(m.code)}
               className={cn(
-                "flex items-baseline justify-between rounded-md px-2.5 py-1.5 text-left text-sm",
-                m.code === trend.code ? "bg-primary/15 ring-1 ring-primary" : "bg-secondary/60 hover:bg-secondary",
+                "flex items-baseline justify-between rounded-xl border-[1.5px] px-2.5 py-1.5 text-left text-sm",
+                m.code === trend.code ? "border-foreground bg-[var(--yellow)]" : "border-transparent bg-secondary hover:border-foreground",
               )}
             >
               <span className="text-muted-foreground">{m.name}</span>
@@ -270,7 +279,7 @@ function TeamRecord({ games, statKey, line }: { games: PlayerGame[]; statKey: Pl
 function Legend({ className, text }: { className: string; text: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={cn("size-2.5 rounded-sm", className)} />
+      <span className={cn("size-3 rounded-sm border-[1.5px] border-foreground", className)} />
       {text}
     </span>
   );
@@ -289,32 +298,32 @@ function GameColumn({ game: g, statKey, line }: { game: PlayerGame; statKey: Pla
     <div
       title={title}
       className={cn(
-        "flex w-15 shrink-0 flex-col items-center gap-1 rounded-xl border px-1 pt-1.5 pb-2",
-        hit ? "border-hit/50 bg-hit/12" : "border-miss/40 bg-miss/8",
+        "flex w-15 shrink-0 flex-col items-center gap-1 rounded-xl border-2 border-foreground px-1 pt-1.5 pb-2",
+        hit ? "bg-[#b9f5df]" : "bg-[#ffc2dc]",
       )}
     >
       <span
         className={cn(
-          "rounded px-1 text-[10px] font-bold leading-4",
-          g.isHome ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground",
+          "rounded-full px-1.5 text-[10px] font-bold leading-4",
+          g.isHome ? "bg-foreground text-white" : "bg-white text-foreground",
         )}
       >
         {g.isHome ? "EV" : "DEP"}
       </span>
       <span
         className={cn(
-          "text-2xl font-extrabold tabular-nums leading-none",
-          hit ? "text-hit" : "text-miss",
+          "poster text-3xl tabular-nums leading-none",
+          !hit && "opacity-50",
         )}
       >
         {value}
       </span>
-      <span className="text-[11px] tabular-nums text-muted-foreground">{g.minutes}&apos;</span>
-      <span className="mt-0.5 flex flex-col items-center gap-0.5 rounded-md bg-background/70 px-1.5 py-1">
+      <span className="text-[11px] font-semibold tabular-nums text-foreground/60">{g.minutes}&apos;</span>
+      <span className="mt-0.5 flex flex-col items-center gap-0.5 rounded-lg bg-white/70 px-1.5 py-1">
         <TeamLogo id={g.opponentId} name={g.opponentName} size={18} />
         <span className="text-[10px] font-bold tracking-wide">{shortName(g.opponentName)}</span>
       </span>
-      <span className="text-[10px] tabular-nums text-muted-foreground/80">{formatDate(g.date)}</span>
+      <span className="text-[10px] font-medium tabular-nums text-foreground/60">{formatDate(g.date)}</span>
     </div>
   );
 }

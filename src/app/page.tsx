@@ -7,7 +7,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { byLeaguePopularity } from "@/lib/league-order";
 import { statusLabel } from "@/lib/status";
 import { listable } from "@/lib/match-filters";
-import { dayRange, formatLongDate, formatTime, parseDateParam } from "@/lib/dates";
+import { dayRange, formatLongDate, formatTime, parseDateParam, todayTR } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
 import { LeagueLogo, TeamLogo } from "@/components/entity-image";
 import { buttonVariants } from "@/components/ui/button";
@@ -87,7 +87,6 @@ export default async function MatchListPage({ searchParams }: { searchParams: Pr
     orderBy: { eventDate: "asc" },
   });
 
-
   const byLeague = new Map<string, typeof matches>();
   for (const m of matches) {
     if (!byLeague.has(m.league.name)) byLeague.set(m.league.name, []);
@@ -97,13 +96,13 @@ export default async function MatchListPage({ searchParams }: { searchParams: Pr
   return (
     <main className="mx-auto w-full max-w-[92rem] space-y-9 px-4 py-8 sm:px-8 sm:py-12">
       {/* Tarih seçimi üst menüdeki gün şeridinde */}
-      <h1>Bugünün sahnesi</h1>
+      <h1>{date === todayTR() ? "Bugünün maçları" : "Günün maçları"}</h1>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-xl font-bold">
             {formatLongDate(date)}{" "}
-            <span className="marker ml-1 inline-block -rotate-2 rounded-full bg-[var(--yellow)] px-3 text-2xl">{matches.length} maç!</span>
+            <span className="marker ml-1 inline-block -rotate-2 rounded-full bg-[var(--yellow)] px-3 text-2xl">{matches.length} maç</span>
           </p>
           <div className="flex rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)] text-sm">
             {LIST_SORTS.map((o) => (
@@ -131,7 +130,7 @@ export default async function MatchListPage({ searchParams }: { searchParams: Pr
       {matches.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            Bu tarihte takip edilen liglerde maç yok.
+            Bu tarihte takip edilen turnuvalarda maç yok.
           </CardContent>
         </Card>
       )}

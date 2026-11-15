@@ -114,3 +114,77 @@ export function careerTotals(rows: CareerRowLike[], exclude: (r: CareerRowLike) 
       matches: 0, minutes: 0, goals: 0, assists: 0,
     });
 }
+
+// Sezonun başladığı yıl: "Premier League 25/26" → 2025, "MLS 2024" → 2024. Bulunamazsa 0.
+export function seasonStartYear(name: string | null): number {
+  if (!name) return 0;
+  const split = name.match(/\b(\d{2})\/(\d{2})\b/);
+  if (split) return 2000 + Number(split[1]);
+  return seasonYear(name);
+}
+
+// Transfer bedeli etiketi. BSD transfer_type: 1 kiralık, 2 kiralıktan dönüş, 3 bonservisli.
+// kind: paid = bonservis ödendi, loan = kiralık / kiralıktan dönüş, free = bedelsiz ya da bedel bilinmiyor
+export function transferFee(
+  type: number | null,
+  feeEur: number | null,
+  feeDescription: string | null,
+): { text: string; kind: "paid" | "loan" | "free" } {
+  if (type === 1) return { text: feeEur && feeEur > 0 ? `Kiralık · ${formatEur(feeEur)}` : "Kiralık", kind: "loan" };
+  if (type === 2) return { text: "Kiralıktan dönüş", kind: "loan" };
+  const amount = formatEur(feeEur);
+  if (amount) return { text: amount, kind: "paid" };
+  if (feeDescription && /free/i.test(feeDescription)) return { text: "Bedelsiz", kind: "free" };
+  return { text: "Bedel açıklanmadı", kind: "free" };
+}
+
+export interface CareerSeasonLike extends CareerRowLike {
+  seasonName: string | null;
+  teamName: string | null;
+  avgRating: number | null;
+}
+
+// Bir takımda geçirilen dönem: o takımdaki bütün sezonların toplamı
+export interface CareerStint<T extends CareerSeasonLike> {
+  teamId: number;
+  teamName: string;
+  national: boolean;
+  seasons: number; // farklı sezon (başlangıç yılı) sayısı
+  fromYear: number;
+  toYear: number;
+  matches: number;
+  minutes: number;
+  goals: number;
+  assists: number;
+  avgRating: number | null; // maç sayısıyla ağırlıklı
+  rows: T[]; // en yeni sezondan eskiye
+}
+
+// Kariyer satırlarını (sezon × turnuva × takım) takım takım toplar. Sıra: en son oynadığı takım önce.
+export function careerStints<T extends CareerSeasonLike>(rows: T[], nationalTeamId: number | null): CareerStint<T>[] {
+  const byTeam = new Map<number, T[]>();
+  for (const r of rows) {
+    if (!byTeam.has(r.teamId)) byTeam.set(r.teamId, []);
+    byTeam.get(r.teamId)!.push(r);
+  }
+  const stints = [...byTeam.entries()].map(([teamId, list]): CareerStint<T> => {
+    const sorted = [...list].sort((a, b) => seasonYear(b.seasonName) - seasonYear(a.seasonName));
+    const starts = sorted.map((r) => seasonStartYear(r.seasonName)).filter((y) => y > 0);
+    const ends = sorted.map((r) => seasonYear(r.seasonName)).filter((y) => y > 0);
+    const rated = sorted.filter((r) => r.avgRating !== null && r.matches > 0);
+    const ratedMatches = rated.reduce((n, r) => n + r.matches, 0);
+    const total = careerTotals(sorted);
+    return {
+      teamId,
+      teamName: sorted.find((r) => r.teamName)?.teamName ?? "–",
+      national: teamId === nationalTeamId,
+      seasons: new Set(starts).size || 1,
+      fromYear: starts.length ? Math.min(...starts) : 0,
+      toYear: ends.length ? Math.max(...ends) : 0,
+      ...total,
+      avgRating: ratedMatches ? rated.reduce((n, r) => n + r.avgRating! * r.matches, 0) / ratedMatches : null,
+      rows: sorted,
+    };
+  });
+  return stints.sort((a, b) => b.toYear - a.toYear || b.fromYear - a.fromYear || b.matches - a.matches);
+}

@@ -1,6 +1,8 @@
 // Maç listesinde liglerin sırası: popüler ligler üstte, aşağı indikçe daha az popüler olanlar.
 // Listede olmayan lig en alta düşer (kendi aralarında alfabetik).
 // İsimler DB'deki league.name ile eşleşir (büyük/küçük harf ve aksan farkı önemsiz).
+import { trLeague } from "./team-names";
+
 const POPULARITY = [
   // Avrupa kupaları
   "Champions League",
@@ -69,7 +71,8 @@ const POPULARITY = [
 const norm = (s: string) =>
   s.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 
-const RANK = new Map(POPULARITY.map((name, i) => [norm(name), i]));
+// Ekranda turnuva adları Türkçe görünür (lib/team-names); sıra iki adla da bulunur
+const RANK = new Map(POPULARITY.flatMap((name, i) => [[norm(name), i], [norm(trLeague(name)), i]] as [string, number][]));
 
 export function leagueRank(name: string): number {
   return RANK.get(norm(name)) ?? POPULARITY.length;

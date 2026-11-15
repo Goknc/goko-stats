@@ -5,7 +5,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { listable } from "@/lib/match-filters";
 import { analyzeMatch, type EvidenceRow, type RateSummary } from "@/lib/analysis";
-import { DEFAULT_SAMPLE } from "@/lib/app-settings";
+import { analysisOptions, DEFAULT_SAMPLE, sampleFromParams, sampleParams, type SampleSettings } from "@/lib/app-settings";
+import { SampleBar } from "@/components/sample-bar";
+import { sideCaption, trendTitle } from "@/lib/trend-labels";
 import { TRENDS } from "@/lib/trend-config";
 import { dayRange, formatLongDate, formatTime, matchDayKey, parseDateParam } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
@@ -15,20 +17,20 @@ import { StripGroup } from "@/components/strip-group";
 import { RatePercent } from "@/components/rate-percent";
 import { FilterSelect } from "@/components/filter-select";
 import { cn } from "@/lib/utils";
-import { isDeciding, pickStrength } from "@/lib/engine/side";
+import { pickStrength } from "@/lib/engine/side";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: { absolute: "Günün trendleri · Gokostats" } };
 
-// Bir önerinin dayandığı tek oran: takımda iki tane (ev, deplasman), oyuncuda bir tane.
-// context: Ev/Dep trendlerinda rakibin karnesi; karar vermez, etiketle belirtilir.
+// Bir trendin dayandığı tek oran: takımda iki tane (ev sahibi, deplasman), oyuncuda bir tane.
+// note: tek takıma bakan trendlerde satırın açıklaması ("Kazandı" / "Kaybetti").
 interface Line {
   label: string;
   hits: number;
   total: number;
   rate: number | null;
   evidence: EvidenceRow[];
-  context?: boolean;
+  note?: string | null;
 }
 
 interface Pick {
@@ -39,13 +41,13 @@ interface Pick {
   league: string;
   match: string;
   lines: Line[];
-  rate: number; // sıralama: maç trendinda zayıf halka, Ev/Dep trendinda o takımın oranı
+  rate: number; // sıralama: maç trendinde zayıf halka, tek takıma bakan trendde o takımın oranı
   sample: number; // eşit yüzdede çok maçlı olan önde
 }
 
-const toLine = (label: string, s: RateSummary, context = false): Line => ({
+const toLine = (label: string, s: RateSummary, note: string | null = null): Line => ({
   label,
-  context,
+  note,
   hits: s.hits,
   total: s.total,
   rate: s.rate,
@@ -93,7 +95,7 @@ function PickRow({ pick, showTrend = false }: { pick: Pick; showTrend?: boolean 
           >
             <span className="min-w-0 truncate font-semibold">
               {line.label}
-              {line.context && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(rakip, bilgi)</span>}
+              {line.note && <span className="ml-1.5 text-xs font-semibold text-muted-foreground">{line.note}</span>}
             </span>
             <div className="order-last col-span-full min-w-0 lg:order-none lg:col-span-1">
               <MatchStrip evidence={line.evidence} slots={slots} />
@@ -112,7 +114,7 @@ function PickRow({ pick, showTrend = false }: { pick: Pick; showTrend?: boolean 
 export default async function RecommendationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; trend?: string; sort?: string }>;
+  searchParams: Promise<{ date?: string; trend?: string; sort?: string; n?: string; esik?: string }>;
 }) {
   const params = await searchParams;
   const date = parseDateParam(params.date);
@@ -120,15 +122,17 @@ export default async function RecommendationsPage({
   const sort: SortKey = SORTS.some((o) => o.key === params.sort) ? (params.sort as SortKey) : "yuzde";
 
   const trends = TRENDS;
-  const sample = DEFAULT_SAMPLE;
+  // Maç sayısı ve eşik sayfadan seçilebilir (?n=10&esik=70); form türü varsayılan
+  const sample: SampleSettings = { ...sampleFromParams(params), teamMode: DEFAULT_SAMPLE.teamMode, playerMode: DEFAULT_SAMPLE.playerMode };
+  const options = analysisOptions(sample);
   const matches = await prisma.match.findMany({
     where: { eventDate: { gte: start, lt: end }, league: { isTracked: true }, ...listable },
     select: { id: true },
   });
-  // Karne etiketi form türüne göre: "X evinde" ya da "X (genel)"
+  // Karne etiketi: genel formda yalnızca takım adı, saha modunda "X evinde" / "X deplasmanda"
   const venueLabel = (name: string, side: "home" | "away") =>
-    sample.teamMode === "all" ? `${name} (genel)` : `${name} ${side === "home" ? "evinde" : "deplasmanda"}`;
-  const analyses = (await Promise.all(matches.map((m) => analyzeMatch(m.id)))).filter((a) => a !== null);
+    sample.teamMode === "all" ? name : `${name} ${side === "home" ? "evinde" : "deplasmanda"}`;
+  const analyses = (await Promise.all(matches.map((m) => analyzeMatch(m.id, options)))).filter((a) => a !== null);
   const trendName = new Map(trends.map((m) => [m.code, m.name]));
 
   const picks: Pick[] = [];
@@ -136,13 +140,13 @@ export default async function RecommendationsPage({
     const base = { matchId: a.matchId, time: a.eventDate, league: a.leagueName, match: `${a.homeTeam.name} – ${a.awayTeam.name}` };
 
     for (const t of a.teamTrends.filter((t) => t.recommended)) {
-      const homeLine = toLine(venueLabel(a.homeTeam.name, "home"), t.home, !isDeciding(t.side, "home"));
-      const awayLine = toLine(venueLabel(a.awayTeam.name, "away"), t.away, !isDeciding(t.side, "away"));
+      const homeLine = toLine(venueLabel(a.homeTeam.name, "home"), t.home, sideCaption(t, "home"));
+      const awayLine = toLine(venueLabel(a.awayTeam.name, "away"), t.away, sideCaption(t, "away"));
       const strength = pickStrength(t.side, t.home, t.away);
       picks.push({
         ...base,
         code: t.code,
-        trendName: trendName.get(t.code) ?? t.name,
+        trendName: trendTitle(t, a.homeTeam.name, a.awayTeam.name),
         // Karar veren karne üstte
         lines: t.side === "AWAY" ? [awayLine, homeLine] : [homeLine, awayLine],
         rate: strength.rate ?? 0,
@@ -173,7 +177,7 @@ export default async function RecommendationsPage({
   const selected = groups.some((g) => g.trend.code === params.trend) ? params.trend : undefined;
   const visible = selected ? groups.filter((g) => g.trend.code === selected) : groups;
 
-  // Maça göre: seçili trend filtresine uyan öneriler maç maç, maçlar saat sırasıyla
+  // Maça göre: seçili trend filtresine uyan trendler maç maç, maçlar saat sırasıyla
   const byMatch = new Map<number, Pick[]>();
   for (const p of picks.filter((p) => !selected || p.code === selected).sort(byTime)) {
     if (!byMatch.has(p.matchId)) byMatch.set(p.matchId, []);
@@ -181,8 +185,13 @@ export default async function RecommendationsPage({
   }
   for (const list of byMatch.values()) list.sort(byRate);
 
-  const link = (trend: string | undefined, s: SortKey) =>
-    `/trends?date=${date}${trend ? `&trend=${trend}` : ""}${s !== "yuzde" ? `&sort=${s}` : ""}`;
+  const link = (trend: string | undefined, s: SortKey, next: SampleSettings = sample) => {
+    const q = new URLSearchParams({ date });
+    if (trend) q.set("trend", trend);
+    if (s !== "yuzde") q.set("sort", s);
+    for (const [k, v] of Object.entries(sampleParams(next))) if (k === "n" || k === "esik") q.set(k, v);
+    return `/trends?${q.toString()}`;
+  };
   const filterLink = (trend?: string) => link(trend, sort);
 
   return (
@@ -190,9 +199,11 @@ export default async function RecommendationsPage({
       <div>
         <h1 className="text-2xl font-bold">Günün trendleri</h1>
         <p className="text-muted-foreground">
-          {formatLongDate(date)} · {analyses.length} maçta {picks.length} trend · son {sample.size} maç
+          {formatLongDate(date)}: {analyses.length} maçta öne çıkan {picks.length} istatistik. Her takımın ve oyuncunun son {sample.size} maçına bakılır.
         </p>
       </div>
+
+      <SampleBar value={sample} defaults={DEFAULT_SAMPLE} hrefFor={(next) => link(selected, sort, next)} modes={false} />
 
       {/* Filtre çubuğu: trend açılır listesi + sıralama */}
       {groups.length > 0 && (
@@ -211,12 +222,13 @@ export default async function RecommendationsPage({
             ].filter((g) => g.options.length > 0)}
           />
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Sırala:</span>
+            <span className="font-bold">Sırala</span>
             <div className="flex rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)]">
               {SORTS.map((o) => (
                 <Link
                   key={o.key}
                   href={link(selected, o.key)}
+                  scroll={false}
                   className={cn(
                     "rounded-full px-3.5 py-1 font-bold transition-colors",
                     sort === o.key ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground",
@@ -235,7 +247,7 @@ export default async function RecommendationsPage({
           <CardContent className="py-8 text-center text-muted-foreground">
             {matches.length === 0
               ? "Bu tarihte takip edilen liglerde maç yok."
-              : "Bu tarihte eşiği geçen istatistik yok. Başka bir güne bak."}
+              : "Bu tarihte eşiği geçen bir istatistik yok. Başka bir güne ya da daha düşük bir eşiğe bakabilirsin."}
           </CardContent>
         </Card>
       )}
@@ -244,12 +256,12 @@ export default async function RecommendationsPage({
         [...byMatch.values()].map((list) => (
           <Card key={list[0].matchId}>
             <CardHeader className="flex flex-row flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="tabular-nums text-muted-foreground">{formatTime(list[0].time)}</span>
-              <Link href={`/matches/${list[0].matchId}?date=${date}`} className="text-xl font-semibold hover:text-primary">
+              <span className="poster rounded-full bg-foreground px-2.5 py-0.5 text-base tabular-nums text-white">{formatTime(list[0].time)}</span>
+              <Link href={`/matches/${list[0].matchId}?date=${date}`} className="text-xl font-extrabold hover:text-primary">
                 {list[0].match}
               </Link>
               <span className="text-sm text-muted-foreground">{list[0].league}</span>
-              <span className="ml-auto text-sm text-muted-foreground">{list.length} trend</span>
+              <span className="ml-auto text-sm font-semibold text-muted-foreground">{list.length} istatistik</span>
             </CardHeader>
             <CardContent>
               {list.map((p, i) => (
@@ -265,7 +277,7 @@ export default async function RecommendationsPage({
             <CardTitle className="text-xl">{g.trend.name}</CardTitle>
             <Badge variant="secondary">{g.trend.scope === "TEAM" ? "Takım" : "Oyuncu"}</Badge>
             <span className="text-sm text-muted-foreground">
-              Eşik %{Math.round(g.trend.threshold * 100)} · {g.picks.length} maç
+              Eşik %{sample.threshold ?? Math.round(g.trend.threshold * 100)} · {g.picks.length} maç
             </span>
           </CardHeader>
           <CardContent>

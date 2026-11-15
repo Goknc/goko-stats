@@ -7,10 +7,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { todayTR } from "@/lib/dates";
 import { DatePicker } from "@/components/date-picker";
 import { SearchBox } from "@/components/search-box";
+import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
-// K-pop: siyah sahne çubuğu, poster harfli logo, hap sekmeler (seçili sarı ve eğik), altında renkli kayan şerit
-const TICKER = ["Bugünün sahnesi", "Hot trendler", "Krallık listesi", "Son 20 maç", "Karşılaştır", "Form tablosu", "Maç analizi", "Gokostats"];
+// K-pop: siyah sahne çubuğu, poster harfli logo, hap sekmeler (seçili sarı ve eğik), altında renkli kayan şerit (ticker)
 
 const NAV = [
   { href: "/", label: "Maçlar" },
@@ -22,7 +22,7 @@ const NAV = [
 // Tarihe bağlı sayfalar (tarih seçici bunlarda görünür, sekme bağlantıları seçili günü taşır)
 const DATED = ["/", "/trends"];
 
-export function AppHeader() {
+export function AppHeader({ ticker }: { ticker?: React.ReactNode }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const router = useRouter();
@@ -46,11 +46,8 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-20 bg-foreground text-white">
       <div className="mx-auto flex max-w-[92rem] items-center gap-x-2 px-3 py-2.5 sm:gap-x-6 sm:px-8">
-        <Link href={hrefOf("/")} className="group flex items-baseline gap-1">
-          <span className="poster text-2xl leading-none tracking-wide sm:text-4xl">
-            Goko<span className="text-[var(--pink)]">stats</span>
-          </span>
-          <span className="wiggle hidden text-xl text-[var(--yellow)] sm:inline">♥</span>
+        <Link href={hrefOf("/")} aria-label="Gokostats ana sayfa">
+          <Logo />
         </Link>
 
         {/* Masaüstü sekmeleri */}
@@ -110,21 +107,8 @@ export function AppHeader() {
           ))}
         </nav>
       )}
-      {/* Kayan şerit */}
-      <div className="stage-gradient overflow-hidden border-y-2 border-foreground py-1 text-white" aria-hidden="true">
-        <div className="marquee-track flex w-max">
-          {[0, 1].map((k) => (
-            <div key={k} className="flex shrink-0">
-              {TICKER.map((t, i) => (
-                <span key={t} className="poster flex items-center gap-4 px-4 text-sm">
-                  {t}
-                  <span className="text-[var(--yellow)]">{i % 2 ? "♥" : "★"}</span>
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Kayan şerit: günün maçları ve krallar (sunucuda hazırlanır, bkz. components/ticker) */}
+      {ticker}
     </header>
   );
 }

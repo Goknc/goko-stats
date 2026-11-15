@@ -78,8 +78,8 @@ export default async function KingsPage({ searchParams }: { searchParams: Promis
       <div>
         <h1 className="text-2xl font-bold">Krallık</h1>
         <p className="mt-3 max-w-3xl text-lg text-muted-foreground">
-          Güncel sezonun liderleri; toplama ya da maç başı ortalamaya göre, istenirse tek mevki. Tüm ligler seçiliyken oyuncunun
-          bütün turnuvalardaki maçları sayılır.
+          Güncel sezonun liderleri. Toplama ya da maç başına ortalamaya göre sıralayabilir, tek bir mevkiye bakabilirsin. Tüm ligler
+          seçiliyken oyuncunun bütün turnuvalardaki maçları sayılır.
         </p>
       </div>
 
@@ -124,13 +124,13 @@ export default async function KingsPage({ searchParams }: { searchParams: Promis
           <span className="text-sm text-muted-foreground">{scope}</span>
           {board.minMatches !== null && (
             <span className="text-sm text-muted-foreground" title="Az maç oynayan oyuncular ortalamada öne geçmesin diye">
-              · en az {board.minMatches} maç
+              · En az {board.minMatches} maç
             </span>
           )}
         </CardHeader>
         <CardContent>
           {board.rows.length === 0 ? (
-            <p className="text-muted-foreground">Bu seçim için henüz oyuncu verisi yok.</p>
+            <p className="text-muted-foreground">Bu seçime uyan oyuncu verisi henüz yok.</p>
           ) : (
             <>
               {/* Podyum: ilk üç oyuncu büyük kartlarda; geniş ekranda 2 · 1 · 3 dizilir, birinci ortada ve yukarıda */}
@@ -173,13 +173,13 @@ export default async function KingsPage({ searchParams }: { searchParams: Promis
                         {positionText(r.position, r.specificPosition) && <span className="opacity-70">· {positionText(r.position, r.specificPosition)}</span>}
                       </div>
                       <div className={cn("poster mt-3 leading-none", i === 0 ? "text-7xl" : "text-6xl")}>{mainValue(r)}</div>
-                      <div className="marker text-xl leading-tight">{mainLabel.toLocaleLowerCase("tr")}</div>
+                      <div className="marker text-xl leading-tight">{mainLabel}</div>
                       <div className="mt-2 flex gap-2 text-xs font-bold">
                         <span className="rounded-full border-2 border-foreground bg-white px-2 py-0.5">{r.matches} maç</span>
                         <span className="rounded-full border-2 border-foreground bg-white px-2 py-0.5">{r.minutes.toLocaleString("tr-TR")}′</span>
                         {!board.averageOnly && (
                           <span className="rounded-full border-2 border-foreground bg-white px-2 py-0.5">
-                            {sort === "total" ? `${decimal(r.perMatch)}/maç` : `toplam ${num(r.total)}`}
+                            {sort === "total" ? `Maç başına ${decimal(r.perMatch)}` : `Toplam ${num(r.total)}`}
                           </span>
                         )}
                       </div>
@@ -196,7 +196,7 @@ export default async function KingsPage({ searchParams }: { searchParams: Promis
                   <span>Takım</span>
                   <span className="text-right">Maç</span>
                   <span className="text-right">Dakika</span>
-                  <span className="text-right">{sort === "total" ? "Maç başı" : board.averageOnly ? "" : "Toplam"}</span>
+                  <span className="text-right">{sort === "total" ? "Maç başına" : board.averageOnly ? "" : "Toplam"}</span>
                   <span className="text-right">{mainLabel}</span>
                 </div>
               )}

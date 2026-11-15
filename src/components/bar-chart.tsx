@@ -1,5 +1,5 @@
 // src/components/bar-chart.tsx
-// Maç maç sütun grafiği (statshub "Charts" gibi): çizgiyi geçen sütun yeşil, geçmeyen kırmızı.
+// Maç maç sütun grafiği: eşiği karşılayan sütun yeşil, karşılamayan pembe.
 // Soldan sağa en yeniden eskiye. Sütun genişliği sınırlı (az maçta dev sütun olmaz), ölçek çizginin
 // üstünde ve altında pay bırakır. Sunucu bileşeni; üzerine gelince maç bilgisi (title) görünür.
 import Link from "next/link";
@@ -28,7 +28,7 @@ export function BarChart({ bars, line, dir }: { bars: Bar[]; line: number; dir: 
   const col = "w-full max-w-12 min-w-5 flex-1";
 
   return (
-    <div className="overflow-x-auto">
+    <div className="pop-scroll overflow-x-auto pb-1">
       <div className="flex min-w-[22rem] gap-2">
         {/* Y ekseni */}
         <div className="relative h-56 w-5 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
@@ -48,7 +48,7 @@ export function BarChart({ bars, line, dir }: { bars: Bar[]; line: number; dir: 
             {/* Çizgi */}
             <div className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-[var(--purple)]" style={{ bottom: `${pct(line)}%` }}>
               <span className="absolute -top-3 right-0 rounded-full bg-[var(--purple)] px-2 text-xs font-bold tabular-nums text-white">
-                {String(line).replace(".", ",")}
+                {dir === "over" ? `${Math.ceil(line)}+` : `En fazla ${Math.floor(line)}`}
               </span>
             </div>
 

@@ -2,6 +2,7 @@
 // Takım ve oyuncu araması (başlıktaki arama kutusu, /search sayfası ve karşılaştırma seçicisi).
 // Ada göre büyük/küçük harf duyarsız; adı aranan kelimeyle başlayanlar önde, sonra en son maçı yeni olanlar.
 import { prisma } from "./prisma";
+import { teamNamesMatching } from "./team-names";
 
 export interface TeamHit {
   type: "team";
@@ -36,7 +37,8 @@ export async function searchTeams(q: string, limit = 8): Promise<TeamHit[]> {
   // Yalnızca takip edilen liglerde maçı olan takımlar (kupada bir kez görünen alt lig takımları değil)
   const teams = await prisma.team.findMany({
     where: {
-      name: { contains: q, mode: "insensitive" },
+      // Ekranda Türkçe görünen milli takımlar Türkçe adıyla da bulunur ("letonya" → Latvia)
+      AND: [{ OR: [{ name: { contains: q, mode: "insensitive" } }, { name: { in: teamNamesMatching(q) } }] }],
       OR: [{ homeMatches: { some: { league: { isTracked: true } } } }, { awayMatches: { some: { league: { isTracked: true } } } }],
     },
     select: { id: true, name: true },

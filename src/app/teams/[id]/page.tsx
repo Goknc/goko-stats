@@ -47,10 +47,10 @@ const VIEWS: { key: View; label: string }[] = [
   { key: "grafik", label: "Grafik" },
 ];
 const DIRS: { key: LineDir; label: string }[] = [
-  { key: "over", label: "Üstü" },
-  { key: "under", label: "Altı" },
+  { key: "over", label: "En az" },
+  { key: "under", label: "En fazla" },
 ];
-const LASTS = [5, 10, 20] as const;
+const LASTS = [5, 10, 20, 40] as const;
 const TEAM_CATEGORIES = CATEGORIES;
 
 const pick = <T extends string>(value: string | undefined, options: readonly { key: T }[], fallback: T): T =>
@@ -58,7 +58,8 @@ const pick = <T extends string>(value: string | undefined, options: readonly { k
 
 const shortDate = (d: Date) => d.toLocaleDateString("tr-TR", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "2-digit" });
 const fmt = (n: number | null, digits = 2) => (n === null ? "–" : n.toFixed(digits).replace(".", ","));
-const fmtLine = (n: number) => String(n).replace(".", ",");
+// Eşik yazımı: en az 3 → "3+", en fazla 2 → "≤2" (adres çubuğunda 2.5 olarak durur)
+const lineText = (line: number, dir: LineDir) => (dir === "over" ? `${Math.ceil(line)}+` : `≤${Math.floor(line)}`);
 const pctOf = (r: number | null) => (r === null ? "–" : `%${Math.round(r * 100)}`);
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -69,8 +70,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 function AvgTile({ label, value, tone }: { label: string; value: number | null; tone?: string }) {
   return (
     <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-3 text-center">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={cn("mt-1 text-2xl font-extrabold tabular-nums sm:text-3xl", tone)}>{fmt(value)}</div>
+      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={cn("poster mt-1 text-3xl tabular-nums sm:text-4xl", tone)}>{fmt(value)}</div>
     </div>
   );
 }
@@ -86,14 +87,14 @@ function LineChips({ title, lines }: { title: string; lines: LineRate[] }) {
       <span className="w-20 shrink-0 text-muted-foreground">{title}</span>
       {lines.map((l) => (
         <span key={l.line} className={cn("rounded-md px-2.5 py-1 tabular-nums", rateTone(l.total ? l.hits / l.total : 0))}>
-          {fmtLine(l.line)} üstü <strong>{l.hits}/{l.total}</strong>
+          {Math.ceil(l.line)}+ <strong>{l.hits}/{l.total}</strong>
         </span>
       ))}
     </div>
   );
 }
 
-// Grafik başlığı: çizgi ± düğmeleri, üst/alt, isabet
+// Grafik başlığı: eşik ± düğmeleri, en az / en fazla, gerçekleşme oranı
 function ChartControls({
   line, dir, rate, avg, hrefLine, hrefDir, extra,
 }: {
@@ -112,14 +113,14 @@ function ChartControls({
       {extra}
       <Segmented options={DIRS} value={dir} href={hrefDir} />
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Çizgi</span>
+        <span className="text-muted-foreground">Eşik</span>
         {line > 0.5 ? (
-          <Link href={hrefLine(line - 1)} scroll={false} className={step} aria-label="Çizgiyi düşür">−</Link>
+          <Link href={hrefLine(line - 1)} scroll={false} className={step} aria-label="Eşiği düşür">−</Link>
         ) : (
           <span className={cn(step, "opacity-40")}>−</span>
         )}
-        <span className="w-8 text-center font-bold tabular-nums">{fmtLine(line)}</span>
-        <Link href={hrefLine(line + 1)} scroll={false} className={step} aria-label="Çizgiyi yükselt">+</Link>
+        <span className="w-8 text-center font-bold tabular-nums">{lineText(line, dir)}</span>
+        <Link href={hrefLine(line + 1)} scroll={false} className={step} aria-label="Eşiği yükselt">+</Link>
       </div>
       <div className="ml-auto flex items-center gap-4 text-sm">
         <span className="text-muted-foreground">
@@ -132,6 +133,8 @@ function ChartControls({
     </div>
   );
 }
+
+const stepButton = "flex size-7 items-center justify-center rounded-md border-2 border-foreground bg-white text-lg font-bold hover:bg-[var(--yellow)]";
 
 const RESULT_TONE = { W: "bg-hit-block text-white", D: "bg-secondary text-foreground", L: "bg-miss-block text-white" } as const;
 const RESULT_LABEL = { W: "G", D: "B", L: "M" } as const;
@@ -195,8 +198,9 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
   const starters = grid.filter((r) => r.starts > 0 && !/^Oyuncu #\d+$/.test(r.name));
   const matchById = new Map(gridMatches.map((m) => [m.id, m]));
 
-  // İsabet: istatistiğin varsayılan çizgisini (Top kapma 3+...) geçtiği ilk 11 maçlarının payı
-  const defaultPlayerLine = DEFAULT_PLAYER_LINES[stat] ?? 1;
+  // Oran: seçilen eşiğe (Top kapma 3+ gibi) ulaştığı ilk 11 maçlarının payı. Eşik listede ± ile değiştirilir (?line=4).
+  const basePlayerLine = DEFAULT_PLAYER_LINES[stat] ?? 1;
+  const defaultPlayerLine = view === "liste" && Number.isInteger(lineParam) && lineParam >= 1 && lineParam <= 20 ? lineParam : basePlayerLine;
   const rateOf = new Map(starters.map((r) => [r.playerId, lineRate(r.played, defaultPlayerLine)]));
   const listPlayers = starters.sort(
     (x, y) => (rateOf.get(y.playerId) ?? -1) - (rateOf.get(x.playerId) ?? -1) || y.starts - x.starts,
@@ -303,7 +307,7 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
         ))}
       </nav>
       {!playersAvailable && (
-        <p className="text-sm text-muted-foreground">Bu ligde oyuncu istatistikleri takip edilmiyor, yalnızca takım istatistikleri var.</p>
+        <p className="text-sm text-muted-foreground">Bu takımın liginde oyuncu istatistikleri tutulmuyor; yalnızca takım istatistikleri var.</p>
       )}
 
       {/* Filtreler */}
@@ -314,7 +318,7 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
         {tab === "takim" && periodOptions.length > 1 && <Segmented options={periodOptions} value={period} href={(k) => href({ period: k })} />}
         <Segmented options={COMPS} value={comp} href={(k) => href({ comp: k })} />
       </div>
-      <div className="overflow-x-auto">
+      <div className="pb-1.5 pr-1.5">
         {tab === "takim" ? (
           <Segmented options={catOptions} value={category} href={(k) => href({ cat: k })} />
         ) : (
@@ -325,7 +329,7 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
       {shown === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            Bu filtrelerle {tab === "takim" && category !== "goals" ? `${catLabel.toLocaleLowerCase("tr")} verisi olan ` : ""}maç yok.
+            Bu filtrelere uyan{tab === "takim" && category !== "goals" ? `, ${catLabel.toLocaleLowerCase("tr")} verisi olan` : ""} maç yok.
           </CardContent>
         </Card>
       )}
@@ -344,7 +348,7 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
                   <LineChips title={forLabel} lines={metrics.forLines} />
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="pop-scroll overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-muted-foreground">
@@ -394,9 +398,8 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
             </div>
             <p className="text-xs text-muted-foreground">
               {catLabel}
-              {period !== "FULL" ? ` · ${PERIODS.find((p) => p.key === period)!.label}` : ""} ·{" "}
-              çizgilerde &quot;üstü&quot; = çizginin üstünde biten maç sayısı.{" "}
-              Yalnızca takip edilen lig ve Avrupa maçları; yerel kupalar yok.
+              {period !== "FULL" ? ` · ${PERIODS.find((p) => p.key === period)!.label}` : ""}. Rozetlerdeki &quot;3+ 7/10&quot; gibi ifadeler, 10 maçın
+              7&apos;sinde en az 3 olduğunu gösterir.
             </p>
           </CardContent>
         </Card>
@@ -428,8 +431,7 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
             <BarChart bars={teamBars} line={teamLine} dir={teamDir} />
             <p className="text-xs text-muted-foreground">
               {catLabel}
-              {period !== "FULL" ? ` · ${PERIODS.find((p) => p.key === period)!.label}` : ""} · soldan sağa en yeniden eskiye · çizgiyi{" "}
-              {teamDir === "over" ? "geçen" : "geçmeyen"} maçlar yeşil.
+              {period !== "FULL" ? ` · ${PERIODS.find((p) => p.key === period)!.label}` : ""}: soldan sağa en yeniden eskiye. Eşiği karşılayan maçlar yeşil görünür.
             </p>
           </CardContent>
         </Card>
@@ -438,18 +440,41 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
       {/* Oyuncu: liste. Her oyuncunun yalnızca oynadığı maçlar, boşluksuz ve en yeniden eskiye */}
       {tab === "oyuncu" && view === "liste" && shown > 0 && (
         <Card>
-          <CardContent className="pt-6">
-            {/* Tablo: ad sütunu en uzun ada göre genişler (kısaltma yok), sonra ortalama, maç sayısı ve maç kutuları */}
-            <div className="overflow-x-auto">
+          <CardContent className="space-y-4 pt-6">
+            {/* Eşik seçimi: oran ve kutucuk renkleri bu sayıya göre */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border-2 border-foreground bg-secondary px-4 py-2.5 text-sm">
+              <span className="poster text-base">Eşik</span>
+              <div className="flex items-center gap-2">
+                {defaultPlayerLine > 1 ? (
+                  <Link href={href({ line: String(defaultPlayerLine - 1) })} scroll={false} className={stepButton} aria-label="Eşiği düşür">−</Link>
+                ) : (
+                  <span className={cn(stepButton, "opacity-40")}>−</span>
+                )}
+                <span className="poster w-10 text-center text-2xl tabular-nums">{defaultPlayerLine}+</span>
+                <Link href={href({ line: String(defaultPlayerLine + 1) })} scroll={false} className={stepButton} aria-label="Eşiği yükselt">+</Link>
+              </div>
+              <span className="font-medium text-muted-foreground">
+                {defaultPlayerLine === basePlayerLine
+                  ? `Varsayılan eşik seçili: bir maçta en az ${defaultPlayerLine} ${statLabel.toLocaleLowerCase("tr")}. Artı ve eksi ile değiştirebilirsin.`
+                  : `Bir maçta en az ${defaultPlayerLine} ${statLabel.toLocaleLowerCase("tr")}.`}
+              </span>
+              {defaultPlayerLine !== basePlayerLine && (
+                <Link href={href({ line: "" })} scroll={false} className="font-bold underline hover:text-primary">
+                  Varsayılana dön ({basePlayerLine}+)
+                </Link>
+              )}
+            </div>
+            {/* Tablo: ad sütunu en uzun ada göre genişler (kısaltma yok), sonra oran, maç sayısı ve maç kutuları */}
+            <div className="pop-scroll overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-muted-foreground">
                     <th className="whitespace-nowrap pb-2 pr-6 font-normal">Oyuncu</th>
                     <th className="whitespace-nowrap pb-2 pr-6 text-right font-normal">
-                      İsabet ({defaultPlayerLine}+)
+                      Oran ({defaultPlayerLine}+)
                     </th>
                     <th className="whitespace-nowrap pb-2 pr-6 text-right font-normal">Maç</th>
-                    <th className="w-full pb-2 font-normal">Son maçlar · en yeni solda</th>
+                    <th className="w-full pb-2 font-normal">Son maçlar (en yenisi solda)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -495,9 +520,9 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
               </table>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              {statLabel} · son {gridMatches.length} maç, yalnızca oynadığı maçlar. İsabet = {defaultPlayerLine}+ yaptığı ilk 11 maçı ÷ ilk 11
-              maç sayısı (Maç sütunu). Yedekten girdiği maçlar kesikli çerçeveyle gösterilir, hesaba katılmaz. Kutunun üzerine gelince maç,
-              tıklayınca maç sayfası; oyuncu adına tıklayınca oyuncu sayfası açılır.
+              {statLabel}: takımın oyuncu verisi olan son {gridMatches.length} maçı; her oyuncuda yalnızca oynadığı maçlar yer alır. Oran,
+              ilk 11 başladığı maçların kaçında en az {defaultPlayerLine} yaptığını gösterir. Yedekten girdiği maçlar kesikli çerçeveyle
+              gösterilir ve hesaba katılmaz. Kutucuğa tıklayınca maç sayfası, oyuncu adına tıklayınca oyuncu sayfası açılır.
             </p>
           </CardContent>
         </Card>
@@ -538,12 +563,12 @@ export default async function TeamPage({ params, searchParams }: { params: Promi
                 />
                 <BarChart bars={playerBars} line={playerLine} dir={dir} />
                 <p className="text-xs text-muted-foreground">
-                  {statLabel} · yalnızca ilk 11&apos;de başladığı maçlar · soldan sağa en yeniden eskiye · çizgiyi{" "}
-                  {dir === "over" ? "geçen" : "geçmeyen"} maçlar yeşil. Listedeki sayı ilk 11 maç sayısı.
+                  {statLabel}: yalnızca ilk 11&apos;de başladığı maçlar, soldan sağa en yeniden eskiye. Eşiği karşılayan maçlar yeşil görünür.
+                  Oyuncu listesindeki sayı, ilk 11 başladığı maç sayısıdır.
                 </p>
               </>
             ) : (
-              <p className="py-4 text-center text-muted-foreground">Bu maçlarda ilk 11&apos;de başlayan oyuncu yok.</p>
+              <p className="py-4 text-center text-muted-foreground">Bu maçlarda ilk 11&apos;de başlayan bir oyuncu yok.</p>
             )}
           </CardContent>
         </Card>

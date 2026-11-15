@@ -1,5 +1,5 @@
 // Maç şeridi: form şeridinin geniş hali. Her kutucukta rakibin logosu ve takımın gözünden skor;
-// trend tuttuysa nane yeşili, tutmadıysa pembe, veri yoksa gri. SOLDAN SAĞA YENİDEN ESKİYE: en soldaki en son maç.
+// trend gerçekleştiyse nane yeşili, gerçekleşmediyse pembe, veri yoksa gri. SOLDAN SAĞA YENİDEN ESKİYE: en soldaki en son maç.
 // Kutucuklar esner (10-15-20 maç alana yayılır); sığmazsa yana kayar ve kaydırma soldan, en yeni maçtan başlar.
 // StripGroup içindeyse aynı gruptaki şeritler birlikte kayar.
 import Link from "next/link";

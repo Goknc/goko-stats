@@ -1,5 +1,5 @@
 // src/lib/analysis.ts
-// Bir maçın tüm trend oranlarını, kanıtlarını ve önerilerini hesaplar.
+// Bir maçın tüm trend oranlarını, maç maç kayıtlarını ve öne çıkan trendlerini hesaplar.
 // Veritabanından okur, hesaplamayı motora (src/lib/engine) bırakır.
 import { prisma } from "./prisma";
 import { availabilityLabel, injuryName } from "./engine/player-bio";
@@ -12,6 +12,7 @@ import {
 } from "./engine/trends";
 import { computeRate } from "./engine/rate";
 import { inferStarter } from "./engine/starter";
+import { loadTeamLineup, type LineupSource, type TeamLineup } from "./lineup";
 import { ladderTops } from "./engine/ladder";
 import { decidingRates, isTrendSide, type TrendSide } from "./engine/side";
 import { canonicalLeagueId } from "./engine/leagues";
@@ -65,7 +66,7 @@ export interface PlayerTrendResult {
   playerName: string;
   teamId: number;
   summary: RateSummary;
-  // Yalnızca bu maçtaki sahası (ev sahibiyse iç saha, deplasmansa dış saha) son ilk 11 maçları. Bilgi amaçlı (sürpriz sayfası).
+  // Yalnızca bu maçtaki sahası (ev sahibiyse iç saha, deplasmansa dış saha) son ilk 11 maçları. Bilgi amaçlı.
   venue: { hits: number; total: number; rate: number | null; lowSample: boolean; isHome: boolean };
   passes: boolean; // eşiği geçti mi
   recommended: boolean; // merdivende en yüksek geçen çizgi mi
@@ -91,8 +92,7 @@ export interface PlayerInfo {
   games: PlayerGame[]; // en yeniden eskiye
 }
 
-// Oyuncu listesinin hangi ilk 11'e dayandığı
-export type LineupSource = "CONFIRMED" | "PREDICTED" | "LAST_MATCH" | "NONE";
+export type { LineupSource } from "./lineup";
 
 export interface MatchAnalysis {
   matchId: number;
@@ -103,6 +103,7 @@ export interface MatchAnalysis {
   awayTeam: { id: number; name: string };
   playerStatsEnabled: boolean;
   lineups: { home: LineupSource; away: LineupSource };
+  squads: { home: TeamLineup; away: TeamLineup }; // sahaya dizilecek ilk 11 + yedekler
   teamTrends: TeamTrendResult[];
   playerTrends: PlayerTrendResult[];
   players: Record<number, PlayerInfo>; // oyuncu kartları için maç maç veri
@@ -209,49 +210,6 @@ function summarizeTeam(
   };
 }
 
-// Bitmiş bir maçın ilk 11'i: kadro biliniyorsa kadrodan, bilinmiyorsa (B9) 60+ dakika oynayanlardan
-async function startersOfMatch(matchId: number, teamId: number): Promise<number[]> {
-  const listed = await prisma.matchLineup.findMany({
-    where: { matchId, teamId, isStarter: true },
-    select: { playerId: true },
-  });
-  if (listed.length) return listed.map((l) => l.playerId);
-
-  const played = await prisma.playerMatchStat.findMany({
-    where: { matchId, teamId },
-    select: { playerId: true, minutesPlayed: true },
-  });
-  return played
-    .filter((p) => inferStarter({ lineupKnown: false, listedAsStarter: false, minutesPlayed: p.minutesPlayed }))
-    .map((p) => p.playerId);
-}
-
-// Analiz edilecek oyuncular ve kaynağı:
-// 1) maçın kendi kadrosu (kesin veya tahmini), 2) bitmiş maçta oynayanlar, 3) takımın son maçındaki ilk 11
-export async function expectedStarters(matchId: number, teamId: number, before: Date): Promise<{ ids: number[]; source: LineupSource }> {
-  const listed = await prisma.matchLineup.findMany({
-    where: { matchId, teamId, isStarter: true },
-    select: { playerId: true, lineupStatus: true },
-  });
-  if (listed.length) return { ids: listed.map((l) => l.playerId), source: listed[0].lineupStatus };
-
-  const played = await startersOfMatch(matchId, teamId);
-  if (played.length) return { ids: played, source: "CONFIRMED" };
-
-  const last = await prisma.match.findFirst({
-    where: {
-      OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }],
-      status: "finished",
-      eventDate: { lt: before },
-      playerStats: { some: { teamId } },
-    },
-    orderBy: { eventDate: "desc" },
-    select: { id: true },
-  });
-  if (!last) return { ids: [], source: "NONE" };
-  return { ids: await startersOfMatch(last.id, teamId), source: "LAST_MATCH" };
-}
-
 export async function playerHistory(playerIds: number[], from: Date, to: Date): Promise<Map<number, PlayerRow[]>> {
   const stats = await prisma.playerMatchStat.findMany({
     where: { playerId: { in: playerIds }, match: { status: "finished", eventDate: { gte: from, lt: to } } },
@@ -320,28 +278,20 @@ export async function playerHistory(playerIds: number[], from: Date, to: Date): 
   return byPlayer;
 }
 
-// Sayfalar için önbellekli giriş: aynı maç 10 dakika içinde tekrar hesaplanmaz.
-// (Veri günde birkaç kez değişir; eşik veya örnek ayarı değişince Ayarlar önbelleği temizler.)
-// Backtest gibi seçenekli çağrılar önbelleğe girmez.
+// Sayfalar için önbellekli giriş: aynı maç aynı seçimle 10 dakika içinde tekrar hesaplanmaz (veri günde birkaç kez değişir).
 export const ANALYSIS_TTL_MS = 10 * 60 * 1000;
 
-// Verilmeyen alanlar Ayarlar'dan gelir (son maç sayısı, takım / oyuncu form türü). Backtest deneyleri için.
+// Verilmeyen alanlar varsayılanı alır (son maç sayısı, takım / oyuncu form türü, eşik).
 export interface AnalysisOptions {
   maxMatches?: number;
   teamMode?: SampleSettings["teamMode"];
   playerMode?: SampleSettings["playerMode"];
+  threshold?: number | null; // 0-1; verilirse bütün trendlerde kendi eşiği yerine bu kullanılır
 }
 
 export function analyzeMatch(matchId: number, options: AnalysisOptions = {}): Promise<MatchAnalysis | null> {
-  if (options.maxMatches || options.teamMode || options.playerMode) return computeAnalysis(matchId, options);
-  return cached(`analysis:${matchId}`, ANALYSIS_TTL_MS, () => computeAnalysis(matchId, options));
-}
-
-// Sayfada seçilen form ayarıyla (sürpriz sayfası: son 10/15/20 · genel ve ev/dep birlikte) önbellekli analiz.
-// Anahtar seçenekleri içerir; Ayarlar "analysis:" önekiyle hepsini temizler.
-export function analyzeMatchWith(matchId: number, options: Required<AnalysisOptions>): Promise<MatchAnalysis | null> {
-  const key = `analysis:${matchId}:${options.maxMatches}:${options.teamMode}:${options.playerMode}`;
-  return cached(key, ANALYSIS_TTL_MS, () => computeAnalysis(matchId, options));
+  const key = [matchId, options.maxMatches ?? "", options.teamMode ?? "", options.playerMode ?? "", options.threshold ?? ""].join(":");
+  return cached(`analysis:${key}`, ANALYSIS_TTL_MS, () => computeAnalysis(matchId, options));
 }
 
 async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): Promise<MatchAnalysis | null> {
@@ -366,8 +316,8 @@ async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): 
     maxMatches: options.maxMatches ?? settings.size,
     allVenues: teamMode === "all",
   };
-  // Aktif trendler; lig bazında kapatılanlar bu maçta hesaplanmaz
-  const trends = trendsForLeague(match.leagueId);
+  // Aktif trendler; lig bazında kapatılanlar bu maçta hesaplanmaz. Sayfada eşik seçildiyse hepsinde o geçerli.
+  const trends = trendsForLeague(match.leagueId).map((t) => (options.threshold ? { ...t, threshold: options.threshold } : t));
 
   // Takım trendleri
   const [homeHistory, awayHistory] = await Promise.all([
@@ -404,17 +354,17 @@ async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): 
 
   // Oyuncu trendleri: yalnızca oyuncu verisi açık liglerde
   const playerTrends: PlayerTrendResult[] = [];
-  const lineups: MatchAnalysis["lineups"] = { home: "NONE", away: "NONE" };
+  const [homeSquad, awaySquad] = await Promise.all([
+    loadTeamLineup(match.id, match.homeTeamId, match.eventDate),
+    loadTeamLineup(match.id, match.awayTeamId, match.eventDate),
+  ]);
+  const lineups: MatchAnalysis["lineups"] = { home: homeSquad.source, away: awaySquad.source };
   const playerInfo: Record<number, PlayerInfo> = {};
   if (match.league.playerStatsEnabled) {
     const playerDefs = trends.filter((mk) => mk.scope === "PLAYER" && isPlayerStatKey(mk.statKey) && mk.line !== null);
 
-    const [homeXI, awayXI] = await Promise.all([
-      expectedStarters(match.id, match.homeTeamId, match.eventDate),
-      expectedStarters(match.id, match.awayTeamId, match.eventDate),
-    ]);
-    lineups.home = homeXI.source;
-    lineups.away = awayXI.source;
+    const homeXI = { ids: homeSquad.starters.map((p) => p.id) };
+    const awayXI = { ids: awaySquad.starters.map((p) => p.id) };
     const playerIds = [...homeXI.ids, ...awayXI.ids];
     const players = await prisma.player.findMany({ where: { id: { in: playerIds } } });
     const history = await playerHistory(playerIds, opts.windowStart, match.eventDate);
@@ -490,7 +440,7 @@ async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): 
         };
       });
 
-      // Merdiven: her istatistikte yalnızca eşiği geçen en yüksek çizgi öneri olur
+      // Merdiven: her istatistikte yalnızca eşiği geçen en yüksek çizgi öne çıkar
       const tops = ladderTops(results);
       results.forEach((r, i) => (r.recommended = tops.has(i)));
       playerTrends.push(...results);
@@ -506,6 +456,7 @@ async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): 
     awayTeam: { id: match.awayTeam.id, name: match.awayTeam.name },
     playerStatsEnabled: match.league.playerStatsEnabled,
     lineups,
+    squads: { home: homeSquad, away: awaySquad },
     teamTrends,
     playerTrends,
     players: playerInfo,

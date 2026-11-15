@@ -13,9 +13,9 @@ A football statistics web app: team and player trends, form leaderboards, head-t
 ## Features
 
 - **Daily match list**: tracked leagues sorted by popularity, with a date picker.
-- **Match detail**: scoreboard, full-time and half-by-half match stats, standout trends, a score prediction model, head-to-head card (all / home / away, last 5/10/20/all), team trend cards with match-by-match evidence, and player cards for both line-ups.
+- **Match detail**: scoreboard, full-time and half-by-half match stats, standout trends, a score prediction model, head-to-head card (all / home / away, last 5/10/20/all), team trend cards with a match-by-match breakdown, line-ups drawn on a pitch (confirmed or predicted starting XI, bench, and icons marking each team's statistical leaders), and player cards for both line-ups. Sample size, form type and the highlight threshold can be changed on the page.
 - **Trends**: every match of the day where both teams' recent record clears a threshold (e.g. *both teams scored in 14 of the last 20*, *10+ corners*, *player 3+ shots*). You can filter by trend and sort by rate, kick-off or match.
-- **Team page**: goals, corners, shots, cards and fouls over the last 5/10/20 matches, filterable by venue, competition and half, as a list or a bar chart with an adjustable line. Also a player grid for the squad.
+- **Team page**: goals, corners, shots, cards and fouls over the last 5/10/20 matches, filterable by venue, competition and half, as a list or a bar chart with an adjustable threshold. Also a player grid for the squad.
 - **Player page**: profile, running streaks (*scored in 5 straight*), season summary (totals, per match, per 90, average rating), standout traits with the per-match value, opponent and minutes, detailed stats (passes, key passes, duels, aerials, dribbles, offsides, xG/xA, saves…), a match-by-match chart for any stat, and a full match log.
 - **Search**: autocomplete for teams and players in the header (keyboard accessible), plus a results page.
 - **Compare**: pick any two teams to see form, per-match averages, match-trend rates and head-to-head.

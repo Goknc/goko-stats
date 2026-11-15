@@ -1,4 +1,4 @@
-// Kanıt tablosu: satırlar maçlar, sütunlar trendler. Bütün trendler aynı örnekten geldiği için satır sırası ortak.
+// Maç maç döküm tablosu: satırlar maçlar, sütunlar trendler. Bütün trendler aynı örnekten geldiği için satır sırası ortak.
 // (Maç detayı sayfasından buraya taşındı; takım ve oyuncu bölümleri birlikte kullanıyor.)
 // Maç sütunu yalnızca "Ev 4-1 Deplasman" gösterir, tek satırda; ayrıntılı etiket fareyle üzerine gelince görünür.
 // Tarih + maç sütunları yatay kaydırmada sabit kalır.
@@ -16,12 +16,12 @@ function parseMatch(label: string) {
 }
 
 function Mark({ outcome }: { outcome: boolean | null }) {
-  if (outcome === null) return <span className="text-muted-foreground/60">–</span>;
+  if (outcome === null) return <span title="Bu maçta veri yok" className="text-muted-foreground/60">–</span>;
   return (
     <span
       className={cn(
-        "inline-flex size-6 items-center justify-center rounded-md text-xs font-bold",
-        outcome ? "bg-hit/15 text-hit" : "bg-miss/10 text-miss",
+        "inline-flex size-6 items-center justify-center rounded-md text-xs font-black text-white",
+        outcome ? "bg-hit-block" : "bg-miss-block",
       )}
     >
       {outcome ? "✓" : "✗"}
@@ -31,17 +31,17 @@ function Mark({ outcome }: { outcome: boolean | null }) {
 
 export function EvidenceTable({ columns }: { columns: { name: string; evidence: EvidenceRow[] }[] }) {
   const rows = columns[0]?.evidence ?? [];
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Örnekte maç yok.</p>;
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Bu seçimde maç yok.</p>;
   const sticky = "sticky left-0 z-10 bg-card";
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
+    <div className="pop-scroll overflow-x-auto rounded-xl border-2 border-foreground bg-card">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="bg-secondary/40 text-muted-foreground">
-            <th className={cn(sticky, "bg-secondary px-3 py-2 text-left font-normal")}>Maç</th>
+          <tr className="bg-secondary text-foreground">
+            <th className={cn(sticky, "bg-secondary px-3 py-2 text-left font-bold")}>Maç</th>
             {columns.map((c) => (
-              <th key={c.name} className="whitespace-nowrap px-2 py-2 text-center text-xs font-normal">
+              <th key={c.name} className="whitespace-nowrap px-2 py-2 text-center text-xs font-bold">
                 {c.name}
               </th>
             ))}

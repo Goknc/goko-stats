@@ -11,7 +11,7 @@ test.describe("Maç listesi ve detay", () => {
 
     await expect(page).toHaveURL(/\/matches\/\d+/);
     await expect(page).toHaveTitle(/ · Gokostats$/);
-    await expect(page.getByText("Öne çıkan trendler")).toBeVisible();
+    await expect(page.getByText("Trendler", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Takım istatistikleri")).toBeVisible();
     await expect(page.getByRole("link", { name: "← Maç listesi" })).toBeVisible();
   });
@@ -38,9 +38,9 @@ test.describe("Maç listesi ve detay", () => {
 
   test("maç olmayan günde boş mesaj çıkar", async ({ page }) => {
     await page.goto(`/?date=${EMPTY_DAY}`);
-    await expect(page.getByText("Bu tarihte takip edilen liglerde maç yok.")).toBeVisible();
+    await expect(page.getByText("Bu tarihte takip edilen turnuvalarda maç yok.")).toBeVisible();
     await page.goto(`/trends?date=${EMPTY_DAY}`);
-    await expect(page.getByText("Bu tarihte takip edilen liglerde maç yok.")).toBeVisible();
+    await expect(page.getByText("Bu tarihte takip edilen turnuvalarda maç yok.")).toBeVisible();
   });
 });
 
@@ -61,7 +61,7 @@ test.describe("Trendler", () => {
 
   test("sıralama Saat ve Maç seçilince URL güncellenir", async ({ page }) => {
     await page.goto(`/trends?date=${DAY}`);
-    test.skip((await page.getByText("Sırala:").count()) === 0, `${DAY} için trend yok`);
+    test.skip((await page.getByText("Sırala", { exact: true }).count()) === 0, `${DAY} için trend yok`);
 
     await page.getByRole("link", { name: "Saat", exact: true }).click();
     await expect(page).toHaveURL(/sort=saat/);
@@ -105,7 +105,7 @@ test.describe("Takım, oyuncu ve karşılaştırma", () => {
     await match.click();
     await page.getByRole("link", { name: /Takımları karşılaştır/ }).click();
     await expect(page).toHaveURL(/\/compare\?a=\d+&b=\d+/);
-    await expect(page.getByText("Maç başı ortalamalar")).toBeVisible();
+    await expect(page.getByText("Maç başına ortalamalar")).toBeVisible();
     await expect(page.getByText("Maç trendleri")).toBeVisible();
     await page.getByRole("link", { name: "Son 5" }).click();
     await expect(page).toHaveURL(/last=5/);
@@ -120,7 +120,7 @@ test.describe("Takım, oyuncu ve karşılaştırma", () => {
     await expect(page).toHaveURL(/stat=assists/);
     await expect(page.getByText(/Asist krallığı/)).toBeVisible();
 
-    await page.getByRole("link", { name: "Maç başı" }).click();
+    await page.getByRole("link", { name: "Maç başına" }).click();
     await expect(page).toHaveURL(/sort=perMatch/);
     await expect(page).toHaveURL(/stat=assists/);
 

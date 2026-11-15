@@ -4,7 +4,9 @@
 // Filtreler adres satırında: ?venue=home&comp=league&last=20&stat=shotsTotal&line=2.5
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { loadPlayerPage, type CareerRow, type PlayerPageGame } from "@/lib/player-page";
+import { loadPlayerPage, type PlayerPageGame } from "@/lib/player-page";
+import { CareerCard, TransfersCard } from "@/components/career-sections";
+import { trCountry, trTeam } from "@/lib/team-names";
 import { filterGames, summarize, highlights, type ProfileComp, type ProfileVenue } from "@/lib/engine/player-profile";
 import {
   averageRating, DETAIL_GROUPS, EXTRA_CHART_STATS, isExtraKey, ladderLines, statValue, successRate, summarizeStat,
@@ -12,11 +14,11 @@ import {
 } from "@/lib/engine/player-extras";
 import { currentStreaks } from "@/lib/engine/streaks";
 import {
-  ageOn, availabilityLabel, careerTotals, footName, formatEur, injuryName, specificPositionName, transferLabel,
+  ageOn, availabilityLabel, footName, formatEur, injuryName, specificPositionName,
 } from "@/lib/engine/player-bio";
 import { positionBenchmark } from "@/lib/position-benchmarks";
 import { playerKingHighlights } from "@/lib/kings";
-import { Crown, Trophy } from "lucide-react";
+import { Crown, Grab, Send, Shield, Sparkles, Star, Trophy, Whistle, Zap } from "lucide-react";
 import {
   benchPer90, benchRates, LOWER_IS_BETTER, MIN_ATTEMPTS, MIN_MINUTES, TOP_SHARE, topPercent, topShare, type BenchPlayer,
 } from "@/lib/engine/position-rank";
@@ -162,52 +164,92 @@ function Tile({ label, value, sub }: { label: string; value: string | number; su
   );
 }
 
-// Detaylı istatistik tablosunun bir satırı: toplam · ilk 11 maçı başı · 90 dakikada
-// Mevkideki ilk %20'deyse satır yeşil, yanında "ilk %X"
+// Detaylı istatistik kartı: büyük toplam, altında çubuk (oranlı satırda başarı yüzdesi, diğerlerinde mevkisindeki
+// oyuncular arasındaki yeri) ve ilk 11 maçı başına / 90 dakikada ortalamalar. Mevkisinde ilk %20'deyse yeşil ve rozetli.
 function DetailLine({ row, games, share, peers }: { row: DetailRow; games: PlayerPageGame[]; share: number | null; peers: string }) {
   const strong = share !== null && share <= TOP_SHARE;
-  const rowClass = cn("border-t border-border", strong && "bg-hit/10");
-  const rankBadge = strong && (
-    <span title={`Güncel sezonda ${peers} arasında, 90 dakikada`} className="ml-2 whitespace-nowrap text-xs font-bold text-hit">
-      ilk %{topPercent(share!)}
-    </span>
-  );
-  const labelClass = cn("py-1.5 pl-1.5 pr-3", strong && "font-semibold text-hit");
+  let total: React.ReactNode;
+  let perGame: number | null;
+  let per90: number | null;
+  let bar: { fill: number; text: string } | null = null;
   if (row.kind === "count") {
     const s = summarizeStat(games, row.key);
     if (s.apps === 0) return null;
-    const d = row.decimals ? 2 : 0;
-    return (
-      <tr className={rowClass}>
-        <td className={labelClass}>
-          {row.label}
-          {rankBadge}
-        </td>
-        <td className="py-1.5 pr-3 text-right font-semibold tabular-nums">{fmt(s.total, d)}</td>
-        <td className="py-1.5 pr-3 text-right tabular-nums">{fmt(s.perGame)}</td>
-        <td className="py-1.5 text-right tabular-nums text-muted-foreground">{fmt(s.per90)}</td>
-      </tr>
-    );
-  }
-  const r = successRate(games, row.won, row.other, row.mode);
-  if (r.total === 0) return null;
-  const won = summarizeStat(games, row.won);
-  return (
-    <tr className={rowClass}>
-      <td className={labelClass}>
-        {row.label}
-        {r.rate !== null && <span className="ml-2 rounded bg-primary/10 px-1.5 text-xs font-bold tabular-nums text-primary">{pct(r.rate)}</span>}
-        {rankBadge}
-      </td>
-      <td className="py-1.5 pr-3 text-right font-semibold tabular-nums">
+    total = fmt(s.total, row.decimals ? 2 : 0);
+    perGame = s.perGame;
+    per90 = s.per90;
+    if (share !== null) bar = { fill: 1 - share, text: `${peers} arasında ilk %${topPercent(share)}` };
+  } else {
+    const r = successRate(games, row.won, row.other, row.mode);
+    if (r.total === 0) return null;
+    const won = summarizeStat(games, row.won);
+    total = (
+      <>
         {r.won}
-        <span className="font-normal text-muted-foreground">/{r.total}</span>
-      </td>
-      <td className="py-1.5 pr-3 text-right tabular-nums">{fmt(won.perGame)}</td>
-      <td className="py-1.5 text-right tabular-nums text-muted-foreground">{fmt(won.per90)}</td>
-    </tr>
+        <span className="text-lg text-muted-foreground">/{r.total}</span>
+      </>
+    );
+    perGame = won.perGame;
+    per90 = won.per90;
+    if (r.rate !== null) bar = { fill: r.rate, text: `${pct(r.rate)} başarı` };
+  }
+  return (
+    <div
+      title={strong ? `Güncel sezonda ${peers} arasında, 90 dakikada` : undefined}
+      className={cn(
+        "rounded-2xl border-2 px-3 py-2.5 transition-transform hover:-translate-y-0.5",
+        strong ? "border-foreground bg-[#b9f5df] shadow-[3px_3px_0_var(--ink)]" : "border-foreground/20 bg-white",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="min-w-0 text-sm font-bold leading-tight">
+          {row.label}
+          {strong && (
+            <span className="ml-1.5 inline-flex -rotate-2 items-center gap-0.5 whitespace-nowrap rounded-full border-[1.5px] border-foreground bg-[var(--yellow)] px-1.5 text-[11px] font-black">
+              <Star className="size-3 fill-foreground" aria-hidden="true" />
+              İlk %{topPercent(share!)}
+            </span>
+          )}
+        </span>
+        <span className="poster shrink-0 text-3xl leading-none tabular-nums">{total}</span>
+      </div>
+      {bar && (
+        <div className="mt-2">
+          <div className="h-2.5 overflow-hidden rounded-full border-[1.5px] border-foreground bg-white">
+            <div
+              className={cn("h-full rounded-full", row.kind === "ratio" ? "bg-[var(--pink)]" : strong ? "bg-hit-block" : "bg-[var(--lilac)]")}
+              style={{ width: `${Math.round(Math.max(0.03, bar.fill) * 100)}%` }}
+            />
+          </div>
+          <div className="mt-1 text-[11px] font-semibold text-foreground/70">{bar.text}</div>
+        </div>
+      )}
+      <div className="mt-1.5 flex justify-between gap-2 text-xs tabular-nums text-muted-foreground">
+        <span>
+          Maç başına <strong className="text-foreground">{fmt(perGame)}</strong>
+        </span>
+        <span>
+          90 dk <strong className="text-foreground">{fmt(per90)}</strong>
+        </span>
+      </div>
+    </div>
   );
 }
+
+const GROUP_STYLE: Record<string, { icon: typeof Zap; pop: string }> = {
+  "Hücum": { icon: Zap, pop: "var(--pink)" },
+  "Pas": { icon: Send, pop: "var(--blue)" },
+  "Mücadele ve savunma": { icon: Shield, pop: "var(--purple)" },
+  "Faul ve top kaybı": { icon: Whistle, pop: "var(--yellow)" },
+  "Kaleci": { icon: Grab, pop: "var(--mint)" },
+};
+
+// Puan rozeti: 7,5+ yeşil, 6,5+ sarı, altı pembe
+const ratingTone = (r: number) => (r >= 7.5 ? "bg-[#b9f5df]" : r >= 6.5 ? "bg-[var(--yellow)]" : "bg-[#ffc2dc]");
+const RESULT_STYLE = { W: "bg-hit-block text-white", D: "bg-[var(--yellow)] text-foreground", L: "bg-miss-block text-white" } as const;
+const RESULT_LETTER = { W: "G", D: "B", L: "M" } as const;
+const resultOf = (g: PlayerPageGame) =>
+  g.goalsFor === null || g.goalsAgainst === null ? null : g.goalsFor > g.goalsAgainst ? "W" : g.goalsFor < g.goalsAgainst ? "L" : "D";
 
 export default async function PlayerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Search> }) {
   const playerId = Number((await params).id);
@@ -229,9 +271,9 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   if (profile.heightCm) facts.push({ label: "Boy", value: `${profile.heightCm} cm` });
   const foot = footName(profile.preferredFoot);
   if (foot) facts.push({ label: "Ayak", value: foot });
-  if (profile.nationality) facts.push({ label: "Uyruk", value: profile.nationality });
+  if (profile.nationality) facts.push({ label: "Uyruk", value: trCountry(profile.nationality) });
   if (profile.nationalTeamName && profile.nationalTeamId)
-    facts.push({ label: "Milli takım", value: profile.nationalTeamName, teamId: profile.nationalTeamId });
+    facts.push({ label: "Milli takım", value: trTeam(profile.nationalTeamName), teamId: profile.nationalTeamId });
   const value = formatEur(profile.marketValueEur);
   if (value) facts.push({ label: "Piyasa değeri", value });
   if (profile.contractUntil) facts.push({ label: "Sözleşme", value: monthYear(profile.contractUntil), title: longDate(profile.contractUntil) });
@@ -239,12 +281,6 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   const injury = injuryLabel
     ? { label: injuryLabel, type: injuryName(profile.injuryType), back: profile.injuryReturn ? longDate(profile.injuryReturn) : null }
     : null;
-
-  // Kariyer: kulüp ve milli takım toplamları ayrı
-  const isNational = (r: { teamId: number }) => r.teamId === profile.nationalTeamId;
-  const clubTotals = careerTotals(data.career, isNational);
-  const nationalTotals = careerTotals(data.career, (r) => !isNational(r));
-  const CAREER_PREVIEW = 12;
 
   const isKeeper = data.player.position === "G";
   // Grafikte seçilebilen istatistikler: temel + detaylı (kaleci istatistikleri yalnızca kalecide)
@@ -356,7 +392,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
                 <dl className="mt-4 flex flex-wrap gap-x-7 gap-y-3">
                   {facts.map((f) => (
                     <div key={f.label} title={f.title}>
-                      <dt className="marker text-lg leading-none text-[var(--purple)]">{f.label.toLocaleLowerCase("tr")}</dt>
+                      <dt className="marker text-lg leading-none text-[var(--purple)]">{f.label}</dt>
                       <dd className="flex items-center gap-1.5 text-lg font-extrabold">
                         {f.teamId !== undefined && <TeamLogo id={f.teamId} name={f.value} size={20} />}
                         {f.value}
@@ -372,7 +408,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
               href={`/matches/${data.nextMatch.id}`}
               className="pop rotate-1 rounded-2xl bg-[var(--yellow)] px-5 py-3"
             >
-              <div className="marker text-xl leading-none">sıradaki maç →</div>
+              <div className="marker text-xl leading-none">Sıradaki maç →</div>
               <div className="text-lg font-extrabold">
                 {data.nextMatch.homeName} – {data.nextMatch.awayName}
               </div>
@@ -387,7 +423,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
             <h2 className="poster mb-3 flex items-center gap-2 text-2xl" title="Güncel sezon toplamında ilk 10">
               <Trophy className="size-6 text-[var(--purple)]" aria-hidden="true" />
               Krallık vitrini
-              <span className="marker rounded-full bg-[var(--yellow)] px-2.5 text-xl normal-case">{kingBadges.length} ödül</span>
+              <span className="marker rounded-full bg-[var(--yellow)] px-2.5 text-xl normal-case">{kingBadges.length} sıralama</span>
             </h2>
             {/* Eşit boyutlu ödül kartları: büyük sıra numarası, altında kategori ve kapsam */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -425,7 +461,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
           <div className="flex w-fit flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border-[2.5px] border-foreground bg-[#ffc2dc] px-4 py-2 font-semibold shadow-[4px_4px_0_var(--ink)]">
             <span className="font-bold text-miss">{injury.label}</span>
             {injury.type && <span>{injury.type}</span>}
-            {injury.back && <span className="text-muted-foreground">· tahmini dönüş {injury.back}</span>}
+            {injury.back && <span className="text-muted-foreground">· Tahmini dönüş: {injury.back}</span>}
           </div>
         )}
         {streaks.length > 0 && (
@@ -447,20 +483,20 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
 
       {games.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">Bu filtrelerle maç yok.</CardContent>
+          <CardContent className="py-8 text-center text-muted-foreground">Bu filtrelere uyan maç yok.</CardContent>
         </Card>
       ) : (
         <>
           {/* Özet */}
           <div className="tiles grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-8">
-            <Tile label="Maç" value={summary.apps} sub={`${summary.starts} ilk 11`} />
+            <Tile label="Maç" value={summary.apps} sub={`${summary.starts} maçta ilk 11`} />
             <Tile label="Dakika" value={summary.minutes.toLocaleString("tr-TR")} />
             <Tile label="Gol" value={summary.totals.goals} sub={`${fmt(summary.per90.goals)} / 90 dk`} />
             <Tile label="Asist" value={summary.totals.assists} sub={`${fmt(summary.per90.assists)} / 90 dk`} />
             <Tile label="Şut" value={summary.totals.shotsTotal} sub={`${fmt(summary.perGame.shotsTotal)} / maç`} />
             <Tile label="İsabetli şut" value={summary.totals.shotsOnTarget} sub={`${fmt(summary.perGame.shotsOnTarget)} / maç`} />
             <Tile label="Top kapma" value={summary.totals.tackles} sub={`${fmt(summary.perGame.tackles)} / maç`} />
-            <Tile label="Ort. puan" value={fmt(rating.avg)} sub={rating.count ? `${rating.count} maç` : "veri yok"} />
+            <Tile label="Ort. puan" value={fmt(rating.avg)} sub={rating.count ? `${rating.count} maç` : "Veri yok"} />
           </div>
 
           {/* Öne çıkan özellikler */}
@@ -468,19 +504,19 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">Öne çıkan özellikler</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Son {summary.starts} ilk 11 maçında en istikrarlı istatistikler · her kutucukta o maçta yaptığı sayı, rakip ve dakika
-                (soldan sağa eskiden yeniye)
+                İlk 11 başladığı son {summary.starts} maçta en istikrarlı olduğu istatistikler. Her kutucukta rakip, o maçta yaptığı sayı ve
+                oynadığı dakika yer alır; en soldaki kutucuk en son maçtır.
               </p>
             </CardHeader>
             <CardContent>
               {hl.length === 0 ? (
-                <p className="text-muted-foreground">Öne çıkan özellik için en az 5 ilk 11 maçı gerekiyor.</p>
+                <p className="text-muted-foreground">Öne çıkan özelliklerin hesaplanması için ilk 11 başladığı en az 5 maç gerekiyor.</p>
               ) : (
                 <div className="grid gap-4 xl:grid-cols-2">
                   {hl.map((h) => (
                     <div
                       key={h.code}
-                      className="space-y-3 rounded-2xl border-2 border-foreground bg-secondary/50 p-4"
+                      className="space-y-1 rounded-2xl border-2 border-foreground bg-secondary/50 p-4"
                     >
                       <Link
                         href={href({ stat: h.statKey, line: String(h.line - 0.5) })}
@@ -513,55 +549,79 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
             </CardContent>
           </Card>
 
-          {/* Detaylı istatistikler */}
+          {/* Detaylı istatistikler: grup grup kartlar */}
           <Card>
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl">Detaylı istatistikler</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Toplam · ilk 11 maçı başına · 90 dakikada
-                {extrasCount > 0 && extrasCount < games.length && ` · detaylı veri ${games.length} maçın ${extrasCount} tanesinde var`}
+                Büyük sayı toplamı, altındaki sayılar ilk 11 maçı başına ve 90 dakikadaki ortalamayı gösterir.
+                {extrasCount > 0 && extrasCount < games.length && ` Detaylı veri ${games.length} maçın ${extrasCount} tanesinde var.`}
                 {bench.length > 0 && (
                   <>
-                    {" · "}
-                    <span className="text-hit">yeşil</span>: güncel sezonda {peers} arasında 90 dakikada ilk %20 (en az {MIN_MINUTES} dk
-                    oynayan {bench.length} oyuncu)
+                    {" "}
+                    <span className="rounded-full border-[1.5px] border-foreground bg-[#b9f5df] px-1.5 font-bold text-foreground">Yeşil kartlar</span>{" "}
+                    güncel sezonda {peers} arasında ilk %20&apos;ye girdiği alanlardır (en az {MIN_MINUTES} dakika oynayan {bench.length} oyuncu
+                    içinde, 90 dakika ortalamasına göre).
                   </>
                 )}
               </p>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-6">
               {strengths.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Güçlü yönleri</span>
-                  {strengths.map(({ row, share }) => (
-                    <span key={row.label} className="rounded-full border border-hit/50 bg-hit/12 px-2.5 py-1 text-xs font-semibold text-hit">
-                      {row.label}
-                      {row.kind === "ratio" && " başarısı"} · {peers} arasında ilk %{topPercent(share)}
-                    </span>
-                  ))}
+                <div className="rounded-2xl border-[2.5px] border-foreground bg-[var(--yellow)] p-4 shadow-[5px_5px_0_var(--ink)]">
+                  <div className="poster mb-3 flex items-center gap-2 text-2xl">
+                    <Sparkles className="size-6" aria-hidden="true" />
+                    Güçlü yönleri
+                  </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    {strengths.map(({ row, share }, i) => (
+                      <div
+                        key={row.label}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-2xl border-2 border-foreground bg-white py-1.5 pl-2 pr-3 transition-transform hover:rotate-0",
+                          i % 2 ? "rotate-1" : "-rotate-1",
+                        )}
+                      >
+                        <span className="poster flex size-11 items-center justify-center rounded-full border-2 border-foreground bg-[var(--pink)] text-lg leading-none text-white">
+                          %{topPercent(share)}
+                        </span>
+                        <span className="leading-tight">
+                          <span className="block font-extrabold">
+                            {row.label}
+                            {row.kind === "ratio" && " başarısı"}
+                          </span>
+                          <span className="block text-xs font-medium text-muted-foreground">{peers} arasında ilk %{topPercent(share)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {extrasCount === 0 ? (
-                <p className="text-muted-foreground">Bu maçlar için detaylı istatistik (pas, ikili mücadele, hava topu...) henüz yok.</p>
+                <p className="text-muted-foreground">Bu maçlar için detaylı istatistik (pas, ikili mücadele, hava topu gibi) henüz yok.</p>
               ) : (
-                <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
-                  {detailGroups.map((grp) => (
-                    <table key={grp.title} className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-xs text-muted-foreground">
-                          <th className="pb-1.5 pl-1.5 pr-3 font-semibold uppercase tracking-wider text-foreground">{grp.title}</th>
-                          <th className="pb-1.5 pr-3 text-right font-normal">Toplam</th>
-                          <th className="pb-1.5 pr-3 text-right font-normal">Maç başı</th>
-                          <th className="pb-1.5 text-right font-normal">90 dk</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {grp.rows.map((row) => (
-                          <DetailLine key={row.label} row={row} games={games} share={shareOf.get(row.label) ?? null} peers={peers} />
-                        ))}
-                      </tbody>
-                    </table>
-                  ))}
+                <div className="grid gap-6 xl:grid-cols-2">
+                  {detailGroups.map((grp) => {
+                    const style = GROUP_STYLE[grp.title] ?? GROUP_STYLE["Hücum"];
+                    const Icon = style.icon;
+                    return (
+                      <section
+                        key={grp.title}
+                        style={{ "--pop": style.pop } as React.CSSProperties}
+                        className="rounded-3xl border-[2.5px] border-foreground bg-secondary/50 p-3 shadow-[5px_5px_0_var(--pop)] sm:p-4"
+                      >
+                        <h3 className="poster mb-3 flex w-fit -rotate-1 items-center gap-2 rounded-full bg-foreground px-3.5 py-1 text-xl text-white">
+                          <Icon className="size-5" aria-hidden="true" />
+                          {grp.title}
+                        </h3>
+                        <div className="grid gap-2.5 sm:grid-cols-2">
+                          {grp.rows.map((row) => (
+                            <DetailLine key={row.label} row={row} games={games} share={shareOf.get(row.label) ?? null} peers={peers} />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -570,7 +630,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
           {/* Grafik */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Maç maç</CardTitle>
+              <CardTitle className="text-xl">İstatistik grafiği</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <FilterSelect
@@ -599,16 +659,16 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
                   ))}
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Çizgi</span>
+                  <span className="text-muted-foreground">Eşik</span>
                   {line > 0.5 ? (
-                    <Link href={href({ line: String(line - 1) })} scroll={false} className={step} aria-label="Çizgiyi düşür">
+                    <Link href={href({ line: String(line - 1) })} scroll={false} className={step} aria-label="Eşiği düşür">
                       −
                     </Link>
                   ) : (
                     <span className={cn(step, "opacity-40")}>−</span>
                   )}
-                  <span className="w-8 text-center font-bold tabular-nums">{String(line).replace(".", ",")}</span>
-                  <Link href={href({ line: String(line + 1) })} scroll={false} className={step} aria-label="Çizgiyi yükselt">
+                  <span className="w-8 text-center font-bold tabular-nums">{Math.ceil(line)}+</span>
+                  <Link href={href({ line: String(line + 1) })} scroll={false} className={step} aria-label="Eşiği yükselt">
                     +
                   </Link>
                 </div>
@@ -627,35 +687,40 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
                 <p className="py-4 text-center text-muted-foreground">
                   {allStarts.length && isExtraKey(stat)
                     ? "Bu istatistik için ilk 11 maçlarında detaylı veri yok."
-                    : "Bu filtrelerle ilk 11'de başladığı maç yok."}
+                    : "Bu filtrelere uyan, ilk 11'de başladığı maç yok."}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                {statLabel} · yalnızca ilk 11&apos;de başladığı maçlar · soldan sağa en yeniden eskiye · çizgiyi geçen maçlar yeşil.
+                {statLabel}: yalnızca ilk 11&apos;de başladığı maçlar, soldan sağa en yeniden eskiye. {Math.ceil(line)} ve üzeri yaptığı maçlar yeşil görünür.
               </p>
             </CardContent>
           </Card>
 
-          {/* Maç kaydı */}
+          {/* Maç kaydı: sonuç rozeti, rakip, skor, puan ve bütün sayılar; başlık ve maç sütunu kaydırırken sabit */}
           <Card>
-            <CardHeader>
+            <CardHeader className="space-y-1">
               <CardTitle className="text-xl">Maç kaydı</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Son {games.length} maçın dökümü. Tablo yana ve aşağı kayar; maça tıklayınca maç sayfası açılır.
+              </p>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto scrollbar-thin">
-                <table className="w-full whitespace-nowrap text-sm">
+              <div className="pop-scroll max-h-[40rem] overflow-auto rounded-2xl border-2 border-foreground bg-white">
+                <table className="w-full border-separate border-spacing-0 whitespace-nowrap text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-muted-foreground">
-                      <th className="sticky left-0 z-10 bg-card py-2 pr-3 font-normal">Maç</th>
-                      <th className="hidden py-2 pr-3 font-normal lg:table-cell">Turnuva</th>
-                      <th className="py-2 pr-3 text-right font-normal">Skor</th>
-                      <th className="py-2 pr-3 text-right font-normal">Dk</th>
-                      <th className="py-2 pr-3 text-right font-normal">Puan</th>
+                    <tr className="poster text-left text-sm">
+                      <th className="sticky left-0 top-0 z-30 border-b-2 border-foreground bg-[var(--yellow)] px-3 py-2.5 font-normal">Maç</th>
+                      <th className="sticky top-0 z-20 border-b-2 border-foreground bg-[var(--yellow)] px-3 py-2.5 text-center font-normal">Skor</th>
+                      <th className="sticky top-0 z-20 border-b-2 border-foreground bg-[var(--yellow)] px-3 py-2.5 text-right font-normal">Dk</th>
+                      <th className="sticky top-0 z-20 border-b-2 border-foreground bg-[var(--yellow)] px-3 py-2.5 text-center font-normal">Puan</th>
                       {logColumns.map((c) => (
                         <th
                           key={c.label}
                           title={c.title}
-                          className={cn("py-2 pr-3 text-right font-normal", c.keys.includes(stat) && "text-foreground")}
+                          className={cn(
+                            "sticky top-0 z-20 border-b-2 border-foreground px-3 py-2.5 text-right font-normal",
+                            c.keys.includes(stat) ? "bg-foreground text-white" : "bg-[var(--yellow)]",
+                          )}
                         >
                           {c.label}
                         </th>
@@ -663,45 +728,78 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
                     </tr>
                   </thead>
                   <tbody>
-                    {games.map((g) => (
-                      <tr key={g.matchId} className={cn("border-t border-border", !g.started && "text-muted-foreground")}>
-                        <td className="sticky left-0 z-10 bg-card py-2 pr-3 shadow-[1px_0_0_var(--border)]">
-                          <Link href={`/matches/${g.matchId}`} className="flex items-center gap-2 hover:text-primary">
-                            <span className="w-14 text-xs tabular-nums text-muted-foreground">{shortDate(g.date)}</span>
-                            <span className="w-6 text-xs text-muted-foreground">{g.isHome ? "İç" : "Dış"}</span>
-                            <TeamLogo id={g.opponentId} name={g.opponentName} size={16} />
-                            <span className="max-w-36 truncate">{g.opponentName}</span>
-                          </Link>
-                        </td>
-                        <td className="hidden py-2 pr-3 text-muted-foreground lg:table-cell">{g.competition}</td>
-                        <td className="py-2 pr-3 text-right font-semibold tabular-nums">
-                          {g.goalsFor}-{g.goalsAgainst}
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums" title={g.started ? "İlk 11" : "Yedekten girdi"}>
-                          {g.minutes}&apos;{!g.started && "*"}
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums">{g.extras?.rating != null ? fmt(g.extras.rating, 1) : "–"}</td>
-                        {logColumns.map((c) => {
-                          const cell = logCell(c, g);
-                          return (
-                            <td
-                              key={c.label}
-                              className={cn(
-                                "py-2 pr-3 text-right tabular-nums",
-                                c.keys.includes(stat) && "font-bold text-foreground",
-                                cell.zero && "text-muted-foreground/50",
+                    {games.map((g, i) => {
+                      const result = resultOf(g);
+                      const zebra = i % 2 ? "bg-secondary" : "bg-white";
+                      return (
+                        <tr key={g.matchId} className={cn("group", !g.started && "text-muted-foreground")}>
+                          <td className={cn("sticky left-0 z-10 border-r-2 border-foreground/15 px-3 py-2 group-hover:bg-[#fff3a6]", zebra)}>
+                            <Link href={`/matches/${g.matchId}`} className="flex items-center gap-2.5 hover:text-primary" title={g.competition}>
+                              {result ? (
+                                <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-md border-[1.5px] border-foreground text-xs font-black", RESULT_STYLE[result])}>
+                                  {RESULT_LETTER[result]}
+                                </span>
+                              ) : (
+                                <span className="size-6 shrink-0" />
                               )}
-                            >
-                              {cell.text}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                              <TeamLogo id={g.opponentId} name={g.opponentName} size={24} />
+                              <span className="min-w-0">
+                                <span className="block max-w-28 truncate font-bold leading-tight sm:max-w-40">{g.opponentName}</span>
+                                <span className="block text-[11px] leading-tight text-muted-foreground">
+                                  {shortDate(g.date)} · {g.isHome ? "İç saha" : "Deplasman"}
+                                </span>
+                              </span>
+                            </Link>
+                          </td>
+                          <td className={cn("px-3 py-2 text-center group-hover:bg-[#fff3a6]", zebra)}>
+                            <span className="poster text-lg tabular-nums">
+                              {g.goalsFor}-{g.goalsAgainst}
+                            </span>
+                          </td>
+                          <td className={cn("px-3 py-2 text-right tabular-nums group-hover:bg-[#fff3a6]", zebra)} title={g.started ? "İlk 11" : "Yedekten girdi"}>
+                            {g.minutes}&apos;{!g.started && "*"}
+                          </td>
+                          <td className={cn("px-3 py-2 text-center group-hover:bg-[#fff3a6]", zebra)}>
+                            {g.extras?.rating != null ? (
+                              <span className={cn("inline-block min-w-10 rounded-full border-[1.5px] border-foreground px-1.5 text-center font-bold tabular-nums text-foreground", ratingTone(g.extras.rating))}>
+                                {fmt(g.extras.rating, 1)}
+                              </span>
+                            ) : (
+                              "–"
+                            )}
+                          </td>
+                          {logColumns.map((c) => {
+                            const cell = logCell(c, g);
+                            const award = !cell.zero && c.kind === "count" && (c.key === "goals" || c.key === "assists");
+                            return (
+                              <td
+                                key={c.label}
+                                className={cn(
+                                  "px-3 py-2 text-right tabular-nums group-hover:bg-[#fff3a6]",
+                                  zebra,
+                                  c.keys.includes(stat) && "font-bold text-foreground",
+                                  cell.zero && "text-muted-foreground/45",
+                                )}
+                              >
+                                {award ? (
+                                  <span className="inline-flex size-6 items-center justify-center rounded-full border-[1.5px] border-foreground bg-[var(--yellow)] font-black text-foreground">
+                                    {cell.text}
+                                  </span>
+                                ) : (
+                                  cell.text
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">* Yedekten girdi; ortalama ve oranlara katılmaz. – = detaylı veri yok. Tablo yana kaydırılır.</p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                * Yedekten girdiği maç; ortalama ve oranlara katılmaz. – işareti o maç için detaylı veri olmadığını gösterir.
+              </p>
             </CardContent>
           </Card>
         </>
@@ -709,104 +807,24 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
 
       {/* Kariyer ve transferler (filtrelerden bağımsız) */}
       {(data.career.length > 0 || data.transfers.length > 0) && (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid items-start gap-9 lg:grid-cols-5">
           {data.career.length > 0 && (
-            <Card className={cn(data.transfers.length > 0 && "lg:col-span-2")}>
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-xl">Kariyer</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Kulüp: {clubTotals.matches} maç · {clubTotals.goals} gol · {clubTotals.assists} asist
-                  {nationalTotals.matches > 0 &&
-                    ` · Milli takım: ${nationalTotals.matches} maç · ${nationalTotals.goals} gol · ${nationalTotals.assists} asist`}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <CareerTable rows={data.career.slice(0, CAREER_PREVIEW)} isNational={isNational} />
-                {data.career.length > CAREER_PREVIEW && (
-                  <details className="group mt-2">
-                    <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                      <span className="group-open:hidden">Tüm kariyer ({data.career.length} satır)</span>
-                      <span className="hidden group-open:inline">Gizle</span>
-                    </summary>
-                    <CareerTable rows={data.career.slice(CAREER_PREVIEW)} isNational={isNational} header={false} />
-                  </details>
-                )}
-              </CardContent>
-            </Card>
+            <CareerCard rows={data.career} nationalTeamId={profile.nationalTeamId} className={data.transfers.length > 0 ? "lg:col-span-3" : "lg:col-span-5"} />
           )}
           {data.transfers.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Transferler</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className="space-y-3">
-                  {data.transfers.map((t) => (
-                    <li key={t.id} className="border-l-2 border-border pl-3">
-                      <div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
-                        <span className="tabular-nums">{t.date.toLocaleDateString("tr-TR", { timeZone: "UTC" })}</span>
-                        <span className={cn("font-semibold", t.transferType === 3 && t.feeEur && "text-primary")}>
-                          {transferLabel(t.transferType, t.feeDescription)}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
-                        {t.fromTeamId !== null && <TeamLogo id={t.fromTeamId} name={t.fromTeamName ?? ""} size={16} />}
-                        <span className="text-muted-foreground">{t.fromTeamName ?? "–"}</span>
-                        <span className="text-muted-foreground">→</span>
-                        {t.toTeamId !== null && <TeamLogo id={t.toTeamId} name={t.toTeamName ?? ""} size={16} />}
-                        <span className="font-semibold">{t.toTeamName ?? "–"}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </CardContent>
-            </Card>
+            <div className={data.career.length > 0 ? "lg:col-span-2" : "lg:col-span-5"}>
+              <TransfersCard transfers={data.transfers} />
+            </div>
           )}
         </div>
       )}
+      {data.career.length === 0 && data.transfers.length === 0 && (
+        <Card>
+          <CardContent className="py-6 text-center text-muted-foreground">
+            Bu oyuncunun kariyer ve transfer geçmişi henüz yüklenmedi.
+          </CardContent>
+        </Card>
+      )}
     </main>
-  );
-}
-
-function CareerTable({ rows, isNational, header = true }: { rows: CareerRow[]; isNational: (r: CareerRow) => boolean; header?: boolean }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full whitespace-nowrap text-sm">
-        {header && (
-          <thead>
-            <tr className="text-left text-xs text-muted-foreground">
-              <th className="py-2 pr-3 font-normal">Sezon</th>
-              <th className="py-2 pr-3 font-normal">Takım</th>
-              <th className="py-2 pr-3 text-right font-normal">Maç</th>
-              <th className="py-2 pr-3 text-right font-normal">Dk</th>
-              <th className="py-2 pr-3 text-right font-normal">Gol</th>
-              <th className="py-2 pr-3 text-right font-normal">Asist</th>
-              <th className="py-2 text-right font-normal">Puan</th>
-            </tr>
-          </thead>
-        )}
-        <tbody>
-          {rows.map((r) => (
-            <tr key={`${r.seasonId}-${r.teamId}`} className="border-t border-border">
-              <td className="max-w-64 truncate py-2 pr-3 text-muted-foreground" title={r.seasonName ?? undefined}>
-                {r.seasonName ?? r.leagueName ?? "–"}
-              </td>
-              <td className="py-2 pr-3">
-                <span className="flex items-center gap-1.5">
-                  <TeamLogo id={r.teamId} name={r.teamName ?? ""} size={16} />
-                  <span className="max-w-44 truncate">{r.teamName ?? "–"}</span>
-                  {isNational(r) && <span className="rounded bg-primary/15 px-1.5 text-[10px] font-bold uppercase text-primary">Milli</span>}
-                </span>
-              </td>
-              <td className="py-2 pr-3 text-right tabular-nums">{r.matches}</td>
-              <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{r.minutes.toLocaleString("tr-TR")}</td>
-              <td className={cn("py-2 pr-3 text-right tabular-nums", r.goals ? "font-semibold" : "text-muted-foreground/50")}>{r.goals}</td>
-              <td className={cn("py-2 pr-3 text-right tabular-nums", r.assists ? "font-semibold" : "text-muted-foreground/50")}>{r.assists}</td>
-              <td className="py-2 text-right tabular-nums">{r.avgRating !== null ? fmt(r.avgRating) : "–"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }

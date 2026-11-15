@@ -18,6 +18,7 @@ interface PredictionCardProps {
 export function PredictionCard({ p, homeName, awayName, actual }: PredictionCardProps) {
   const { prediction: pr } = p;
   const hit = actual && actual.home === pr.mostLikely.home && actual.away === pr.mostLikely.away;
+  const sameTier = p.tiers.home && p.tiers.home === p.tiers.away;
 
   return (
     <Card>
@@ -25,53 +26,53 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
         <CardTitle className="text-xl">Skor tahmini</CardTitle>
         {p.source === "trained" ? (
           <p className="text-sm text-muted-foreground">
-            Eğitilmiş model · geçmiş 25 bin maçtan öğrenildi: güç farkı (Elo), benzer güçteki rakiplere karşı gol, son dönem gol ve şut
-            ortalamaları, sahaya göre form, dinlenme, aralarındaki maçlar. Tek skor tahmini doğası gereği %10–13 civarında kalır;
-            asıl bilgi sonuç ve gol olasılıklarında.
+            Bu skorlar, yaklaşık 25 bin geçmiş maçla eğitilmiş bir istatistik modelinin tahminidir; bahis tavsiyesi değildir. Model iki
+            takımın güç farkına (Elo), benzer güçteki rakiplere karşı attıkları ve yedikleri gollere, son dönemdeki gol ve şut
+            ortalamalarına, iç saha ve deplasman formuna, dinlenme sürelerine ve aralarındaki maçlara bakar. Futbolda tek bir skoru
+            bilmek zordur; sonuç ve gol olasılıkları daha anlamlı bir fikir verir.
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Poisson modeli · rakip gücüne göre düzeltilmiş · {homeName} son {p.home.games}, {awayName} son {p.away.games} lig maçı
-            (iç saha + deplasman){p.h2h.games > 0 ? ` · aralarındaki ${p.h2h.games} maç` : ""}
+            Bu skorlar bir istatistik modelinin (Poisson) tahminidir; bahis tavsiyesi değildir. Model {homeName} takımının son{" "}
+            {p.home.games}, {awayName} takımının son {p.away.games} maçındaki gollere rakip gücünü hesaba katarak bakar
+            {p.h2h.games > 0 ? ` ve aralarındaki ${p.h2h.games} maçı da değerlendirir` : ""}.
           </p>
         )}
       </CardHeader>
       <CardContent className="space-y-5">
         {p.lowSample && (
-          <p className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground">
-            Az veri: takımlardan birinin yeterli maçı yok, tahmin büyük ölçüde lig ortalamasına dayanıyor.
+          <p className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-2 text-sm font-medium">
+            Takımlardan birinin yeterli maçı olmadığı için tahmin büyük ölçüde lig ortalamasına dayanıyor.
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-          {/* En olası skor */}
-          <div>
-            <div className="marker text-2xl leading-none text-[var(--purple)]">en olası skor</div>
+        {/* Olası skorlar: en olası olan büyük, diğerleri yanında */}
+        <div>
+          <div className="marker text-2xl leading-none text-[var(--purple)]">Olası skorlar</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-6 gap-y-3">
             <div className="flex items-baseline gap-3">
               <span className="poster text-7xl leading-none tabular-nums text-foreground [text-shadow:4px_4px_0_var(--yellow)]">
                 {pr.mostLikely.home}-{pr.mostLikely.away}
               </span>
-              <span className="text-sm text-muted-foreground">{pct(pr.mostLikely.p)}</span>
+              <span className="text-sm font-semibold text-muted-foreground">{pct(pr.mostLikely.p)}</span>
             </div>
-            {actual && (
-              <div className={hit ? "text-sm font-semibold text-hit" : "text-sm text-muted-foreground"}>
-                Gerçek skor {actual.home}-{actual.away}
-                {hit ? " ✓" : ""}
-              </div>
-            )}
-          </div>
-
-          {/* Diğer olası skorlar */}
-          <div className="flex gap-2">
-            {pr.topScores.slice(1).map((s) => (
-              <div key={`${s.home}-${s.away}`} className="rounded-2xl border-2 border-foreground bg-secondary px-4 py-1.5 text-center">
-                <div className="poster text-2xl tabular-nums">
-                  {s.home}-{s.away}
+            <div className="flex flex-wrap gap-2">
+              {pr.topScores.slice(1).map((s) => (
+                <div key={`${s.home}-${s.away}`} className="rounded-2xl border-2 border-foreground bg-secondary px-4 py-1.5 text-center">
+                  <div className="poster text-2xl tabular-nums">
+                    {s.home}-{s.away}
+                  </div>
+                  <div className="text-xs font-medium text-muted-foreground">{pct(s.p)}</div>
                 </div>
-                <div className="text-xs text-muted-foreground">{pct(s.p)}</div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+          {actual && (
+            <div className={hit ? "mt-2 text-sm font-bold text-hit" : "mt-2 text-sm font-medium text-muted-foreground"}>
+              Maç {actual.home}-{actual.away} bitti
+              {hit ? " ✓" : ""}
+            </div>
+          )}
         </div>
 
         {/* Sonuç olasılıkları */}
@@ -111,8 +112,11 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
               <TierLine team={awayName} rec={p.tiers.awayVsHomeTier} opponent={homeName} />
             </div>
             <p className="text-xs text-muted-foreground">
-              Takımlar güce göre üçe bölündü; {homeName} {TIER_LABEL[p.tiers.home]}, {awayName} {TIER_LABEL[p.tiers.away]} grupta.
-              Bu karne bilgi amaçlı; model rakip gücünü her maçta ayrıca hesaba katıyor.
+              Turnuvadaki takımlar güçlerine göre üst, orta ve alt olmak üzere üç gruba ayrılır.{" "}
+              {sameTier
+                ? `${homeName} ve ${awayName} ${TIER_LABEL[p.tiers.home]} grupta yer alıyor.`
+                : `${homeName} ${TIER_LABEL[p.tiers.home]} grupta, ${awayName} ${TIER_LABEL[p.tiers.away]} grupta yer alıyor.`}{" "}
+              Bu tablo yalnızca bilgi verir; model her maçta rakibin gücünü ayrıca hesaba katar.
             </p>
           </div>
         )}
@@ -120,7 +124,7 @@ export function PredictionCard({ p, homeName, awayName, actual }: PredictionCard
         {/* Aralarındaki maçların etkisi (yalnızca Poisson modelinde; eğitilmiş model bunu kendi özelliği olarak kullanır) */}
         {p.source === "poisson" && p.h2h.games > 0 && (
           <p className="text-sm text-muted-foreground">
-            Aralarındaki maçların etkisi: {homeName} gol beklentisi {effect(p.h2h.home)}, {awayName} {effect(p.h2h.away)}.
+            Aralarındaki maçların etkisi: {homeName} için gol beklentisi {effect(p.h2h.home)}, {awayName} için {effect(p.h2h.away)}.
           </p>
         )}
       </CardContent>
@@ -136,8 +140,8 @@ function effect(k: number): string {
 function TierLine({ team, rec, opponent }: { team: string; rec: TierRecord; opponent: string }) {
   return (
     <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-2 text-sm">
-      <div className="text-xs text-muted-foreground">
-        {team} · {TIER_LABEL[rec.tier]} gruptaki rakiplere ({opponent} gibi)
+      <div className="text-xs font-medium text-muted-foreground">
+        {team}, {TIER_LABEL[rec.tier]} gruptaki rakiplere karşı ({opponent} gibi)
       </div>
       {rec.games === 0 ? (
         <div className="text-muted-foreground">Bu dönemde maç yok</div>
@@ -148,7 +152,7 @@ function TierLine({ team, rec, opponent }: { team: string; rec: TierRecord; oppo
             {rec.wins}G {rec.draws}B {rec.losses}M
           </span>
           <span className="text-muted-foreground">
-            maç başı {(rec.scored / rec.games).toFixed(1)} attı, {(rec.conceded / rec.games).toFixed(1)} yedi
+            Maç başına {(rec.scored / rec.games).toFixed(1).replace(".", ",")} gol attı, {(rec.conceded / rec.games).toFixed(1).replace(".", ",")} gol yedi
           </span>
         </div>
       )}
@@ -156,11 +160,12 @@ function TierLine({ team, rec, opponent }: { team: string; rec: TierRecord; oppo
   );
 }
 
+// Etiket tek satırda kalır (uzun olanlar için küçük punto), kutu ortalı
 function Prob({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border-2 border-foreground bg-secondary px-3 py-2">
-      <div className="text-sm font-semibold text-muted-foreground">{label}</div>
-      <div className="poster text-4xl leading-tight tabular-nums">{pct(value)}</div>
+    <div className="rounded-2xl border-2 border-foreground bg-secondary px-1.5 py-2.5 text-center">
+      <div className="whitespace-nowrap text-[0.7rem] font-bold leading-tight tracking-tight text-muted-foreground min-[420px]:text-xs">{label}</div>
+      <div className="poster mt-0.5 text-4xl leading-tight tabular-nums">{pct(value)}</div>
     </div>
   );
 }

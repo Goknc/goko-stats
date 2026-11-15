@@ -108,8 +108,8 @@
   --sidebar-ring: #7c3aed;
 
   /* Uygulamaya özel */
-  --hit: #0a9d6c; /* tuttu: nane yeşili (yazı) */
-  --miss: #e6176a; /* tutmadı: sıcak pembe (yazı) */
+  --hit: #0a9d6c; /* gerçekleşti: nane yeşili (yazı) */
+  --miss: #e6176a; /* gerçekleşmedi: sıcak pembe (yazı) */
   --unknown: #d9d2e8;
   --hit-block: #12c48b;
   --miss-block: #ff2e7e;
@@ -180,6 +180,41 @@
   ::selection {
     background: var(--yellow);
     color: var(--ink);
+  }
+  /* Kaydırma çubukları: ince, hap biçimli, renkli başparmak (sayfa ve bütün kayan kutular) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--purple) transparent;
+  }
+  html {
+    scrollbar-color: var(--purple) var(--background);
+  }
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--stage);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    border-width: 2px;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* Chromium'da standart özellikler ::-webkit kurallarını devre dışı bırakır; gradyanlı sürüm kalsın */
+  @supports selector(::-webkit-scrollbar) {
+    *,
+    html {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
   }
 }
 
@@ -287,13 +322,13 @@
     border: 2px solid var(--ink);
     box-shadow: 3px 3px 0 var(--pop, var(--lilac));
   }
-  /* Şık yatay kaydırma çubuğu: ince, gradyan başparmak */
+  /* İçerik kutularındaki kaydırma çubuğu: açık renkli ray üstünde gradyan hap */
   .pop-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: var(--pink) transparent;
+    scrollbar-color: var(--pink) var(--secondary);
   }
   .pop-scroll::-webkit-scrollbar {
-    height: 9px;
+    width: 10px;
+    height: 10px;
   }
   .pop-scroll::-webkit-scrollbar-track {
     background: var(--secondary);
@@ -301,12 +336,14 @@
   }
   .pop-scroll::-webkit-scrollbar-thumb {
     background: var(--stage);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--secondary);
     border-radius: 9999px;
+  }
+  .pop-scroll::-webkit-scrollbar-thumb:hover {
+    border-color: var(--ink);
   }
   @supports selector(::-webkit-scrollbar) {
     .pop-scroll {
-      scrollbar-width: auto;
       scrollbar-color: auto;
     }
   }
@@ -339,7 +376,100 @@
     background: var(--stage);
   }
   .marquee-track {
-    animation: marquee 38s linear infinite;
+    animation: marquee 80s linear infinite;
+  }
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track {
+    animation-play-state: paused;
+  }
+  /* Alev halkası (maç posteri): üstüne gelince büyüyerek görünür, yavaşça döner; diller kare kare titrer */
+  .flame-ring {
+    opacity: 0;
+    transform: scale(0.55) rotate(-20deg);
+    transition:
+      opacity 0.25s ease-out,
+      transform 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
+  }
+  .group:hover .flame-ring,
+  .group:focus-visible .flame-ring {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  .flame-spin {
+    transform-origin: 0 0;
+    animation: flame-spin 26s linear infinite;
+    animation-play-state: paused;
+  }
+  .flame-spin-rev {
+    animation-duration: 38s;
+    animation-direction: reverse;
+  }
+  .flame-tongue {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: flame-flick 1.5s steps(5, jump-none) infinite alternate;
+    animation-play-state: paused;
+  }
+  .group:hover .flame-spin,
+  .group:hover .flame-tongue,
+  .group:focus-visible .flame-spin,
+  .group:focus-visible .flame-tongue {
+    animation-play-state: running;
+  }
+  /* Takıma özel hover animasyonu (team-aura.tsx): takım renklerinde fırıldak + yörüngede simge sticker'ları */
+  .team-aura {
+    opacity: 0;
+    transform: scale(0.55) rotate(-20deg);
+    transition:
+      opacity 0.25s ease-out,
+      transform 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
+  }
+  .group:hover .team-aura,
+  .group:focus-visible .team-aura {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  .aura-burst {
+    position: absolute;
+    inset: 13%;
+    border-radius: 9999px;
+    border: 3px solid var(--ink);
+    animation: flame-spin 30s linear infinite reverse;
+  }
+  .aura-orbit {
+    position: absolute;
+    inset: 0;
+    animation: flame-spin 14s linear infinite;
+  }
+  .aura-slot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+  }
+  /* Yörünge dönerken simge dik kalsın diye ters yönde aynı hızla döner */
+  .aura-upright {
+    display: block;
+    animation: flame-spin 14s linear infinite reverse;
+  }
+  .aura-sticker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 2px solid var(--ink);
+    background: #fff;
+    box-shadow: 2px 2px 0 var(--ink);
+    line-height: 1;
+    animation: aura-bob 0.9s steps(4, jump-none) infinite alternate;
+  }
+  .aura-burst,
+  .aura-orbit,
+  .aura-upright,
+  .aura-sticker {
+    animation-play-state: paused;
+  }
+  .group:hover :is(.aura-burst, .aura-orbit, .aura-upright, .aura-sticker),
+  .group:focus-visible :is(.aura-burst, .aura-orbit, .aura-upright, .aura-sticker) {
+    animation-play-state: running;
   }
   .wiggle:hover {
     animation: wiggle 0.5s ease-in-out;
@@ -349,6 +479,33 @@
 @keyframes marquee {
   to {
     transform: translateX(-50%);
+  }
+}
+@keyframes flame-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes aura-bob {
+  from {
+    transform: translateY(8%) rotate(-12deg) scale(0.92);
+  }
+  to {
+    transform: translateY(-10%) rotate(12deg) scale(1.1);
+  }
+}
+@keyframes flame-flick {
+  0% {
+    transform: scaleY(0.8) skewX(-7deg);
+  }
+  35% {
+    transform: scaleY(1.14) skewX(6deg);
+  }
+  70% {
+    transform: scaleY(0.92) skewX(-3deg);
+  }
+  100% {
+    transform: scaleY(1.06) skewX(8deg);
   }
 }
 /* Çoğu zaman durur, arada bir titrer */
@@ -380,7 +537,13 @@
 @media (prefers-reduced-motion: reduce) {
   .marquee-track,
   .wiggle:hover,
-  .rate-fire {
+  .rate-fire,
+  .flame-spin,
+  .flame-tongue,
+  .aura-burst,
+  .aura-orbit,
+  .aura-upright,
+  .aura-sticker {
     animation: none;
   }
 }

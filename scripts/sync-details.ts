@@ -4,6 +4,7 @@
 // Kullanım:
 //   npx tsx scripts/sync-details.ts --limit 500    (en yeni 500 maç)
 //   npx tsx scripts/sync-details.ts --match 213582 (tek maç, test için)
+//   npx tsx scripts/sync-details.ts --leagues 64,58,27 --limit 400 (yalnızca bu ligler)
 import { prisma } from "../src/lib/prisma";
 import { bsd, BsdQuotaError } from "../src/lib/bsd/client";
 import type {
@@ -21,6 +22,7 @@ function arg(name: string): string | undefined {
 
 const limit = Number(arg("limit") ?? 500);
 const onlyMatch = arg("match") ? Number(arg("match")) : undefined;
+const leagueFilter = arg("leagues")?.split(",").map(Number).filter(Number.isInteger);
 
 type MatchRef = { id: number; homeTeamId: number; awayTeamId: number };
 type PeriodCode = "FULL" | "H1" | "H2";
@@ -157,6 +159,7 @@ runJob("details", async () => {
           scoresOnly: false, // yalnızca skor arşivi olan eski maçlara dokunma (kota)
           eventDate: { lt: cutoff },
           league: { isTracked: true },
+          ...(leagueFilter?.length ? { leagueId: { in: leagueFilter } } : {}),
         },
     orderBy: { eventDate: "desc" },
     take: limit,

@@ -29,7 +29,7 @@ export function FilterSelect({ label, groups, selected }: { label: string; group
           "data-[state=open]:bg-[var(--yellow)]",
         )}
       >
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
         <span className="font-semibold text-foreground">{current?.label ?? "Seç"}</span>
         {current?.count !== undefined && (
           <span className="rounded-md bg-primary/15 px-1.5 text-xs font-bold tabular-nums text-primary">{current.count}</span>
@@ -48,7 +48,7 @@ export function FilterSelect({ label, groups, selected }: { label: string; group
         </svg>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="max-h-[60vh] w-64 overflow-y-auto p-1.5">
+      <PopoverContent align="start" className="pop-scroll max-h-[60vh] w-64 overflow-y-auto p-1.5">
         {groups.map((g, gi) => (
           <div key={g.title ?? gi} className={cn(gi > 0 && "mt-1.5 border-t border-border pt-1.5")}>
             {g.title && (
@@ -62,6 +62,7 @@ export function FilterSelect({ label, groups, selected }: { label: string; group
                 <Link
                   key={o.value}
                   href={o.href}
+                  scroll={false}
                   onClick={() => setOpen(false)}
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors",
