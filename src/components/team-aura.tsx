@@ -1,15 +1,19 @@
 // Maç posterinde takımın üstüne gelince logonun çevresinde beliren, takıma özel animasyon:
 // takım renklerinde dönen bir fırıldak ve çevresinde yörüngede dönen simge sticker'ları
 // (Galatasaray'a aslan, Fenerbahçe'ye kanarya, Norveç'e Viking baltası...).
-// Listede olmayan takımda genel alev halkası (FlameRing) gösterilir. Yeni takım eklemek için AURAS'a bir satır yeter.
+// Listede olmayan takımda yalnızca fırıldak döner; renkleri logosundan çıkarılır (team-colors.ts). Logo okunamazsa ya da henüz inmediyse
+// genel alev halkası (FlameRing) gösterilir. Yeni takım eklemek için AURAS'a bir satır yeter.
 // Görünürlük ve animasyon globals.css > .team-aura; kapsayan öğede `group` sınıfı olmalı.
 import type { CSSProperties } from "react";
 import { FlameRing } from "@/components/flame-ring";
+import { teamColorsSoon } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 
 interface Aura {
   icons: string[]; // sırayla tekrarlanır
   colors: string[]; // fırıldağın dilimleri (2 ya da 3 renk)
+  // Simge emoji değil düz karakterse (★, ☾) sticker'ın zemin ve simge rengi; böylece simge takımın renginde olur
+  sticker?: { bg: string; color: string };
 }
 
 const RED = "#e3262e";
@@ -26,12 +30,12 @@ const AURAS: Record<number, Aura> = {
   155: { icons: ["🐓"], colors: [INK, WHITE] }, // Atlético Mineiro · Galo
   164: { icons: ["⛵"], colors: [INK, WHITE] }, // Vasco da Gama · karavela
   // Milli takımlar
-  932: { icons: ["🌙", "⭐"], colors: [RED, WHITE] }, // Türkiye · Ay-Yıldızlılar
+  932: { icons: ["☾", "★"], colors: [RED, WHITE], sticker: { bg: RED, color: WHITE } }, // Türkiye · Ay-Yıldızlılar (bayraktaki gibi kırmızı üstüne beyaz)
   475: { icons: ["🐂"], colors: [RED, "#ffd23f"] }, // İspanya · boğa
   493: { icons: ["🦁"], colors: [WHITE, RED] }, // İngiltere · Üç Aslan
   485: { icons: ["🐓"], colors: ["#2447b3", WHITE, RED] }, // Fransa · Galya horozu
   477: { icons: ["😈"], colors: [INK, "#ffd23f", RED] }, // Belçika · Kırmızı Şeytanlar
-  1326: { icons: ["⭐", "💙"], colors: ["#1f6fd6", WHITE] }, // İtalya · Gök Mavililer, dört yıldız
+  1326: { icons: ["🍕"], colors: ["#1f6fd6", WHITE] }, // İtalya · pizza, Gök Mavililer'in mavisi
   494: { icons: ["🟥", "⬜"], colors: [RED, WHITE] }, // Hırvatistan · dama
   930: { icons: ["🦁"], colors: [RED, WHITE, "#2447b3"] }, // Çekya · çift kuyruklu aslan
   488: { icons: ["🪓", "🛡️"], colors: [RED, "#1d2f6f", WHITE] }, // Norveç · Vikingler
@@ -58,9 +62,19 @@ function pinwheel(colors: string[]): string {
   return `repeating-conic-gradient(${colors.map((c, i) => `${c} ${i * slice}deg ${(i + 1) * slice}deg`).join(", ")})`;
 }
 
-export function TeamAura({ teamId, className }: { teamId: number; className?: string }) {
+export async function TeamAura({ teamId, className }: { teamId: number; className?: string }) {
   const aura = AURAS[teamId];
-  if (!aura) return <FlameRing className={className} />;
+  if (!aura) {
+    // Simgesi olmayan takım: yalnızca takım renklerinde fırıldak
+    const colors = await teamColorsSoon(teamId);
+    if (!colors) return <FlameRing className={className} />;
+    return (
+      <span className={cn("team-aura pointer-events-none block", className)} aria-hidden="true">
+        <span className="aura-burst aura-burst-solo" style={{ background: pinwheel(colors) }} />
+      </span>
+    );
+  }
+  const stickerStyle: CSSProperties | undefined = aura.sticker && { background: aura.sticker.bg, color: aura.sticker.color, fontVariantEmoji: "text" };
   return (
     <span className={cn("team-aura pointer-events-none block", className)} aria-hidden="true">
       <span className="aura-burst" style={{ background: pinwheel(aura.colors) }} />
@@ -74,7 +88,7 @@ export function TeamAura({ teamId, className }: { teamId: number; className?: st
           return (
             <span key={i} className="aura-slot" style={style}>
               <span className="aura-upright">
-                <span className="aura-sticker size-7 text-sm sm:size-14 sm:text-3xl" style={{ animationDelay: `${-(i % 3) * 0.3}s` }}>
+                <span className="aura-sticker size-7 text-sm sm:size-14 sm:text-3xl" style={{ ...stickerStyle, animationDelay: `${-(i % 3) * 0.3}s` }}>
                   {aura.icons[i % aura.icons.length]}
                 </span>
               </span>

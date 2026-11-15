@@ -436,6 +436,11 @@
     border: 3px solid var(--ink);
     animation: flame-spin 30s linear infinite reverse;
   }
+  /* Simgesiz takımda fırıldak tek başına: biraz daha geniş ve hızlı ki boş durmasın */
+  .aura-burst-solo {
+    inset: 6%;
+    animation-duration: 12s;
+  }
   .aura-orbit {
     position: absolute;
     inset: 0;

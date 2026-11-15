@@ -117,11 +117,12 @@ function rankRow(row: DetailRow, games: PlayerPageGame[], bench: BenchPlayer[]):
   if (row.kind === "count") {
     if (LOWER_IS_BETTER.has(row.key)) return null;
     const s = summarizeStat(games, row.key);
-    if (s.per90 === null || s.minutes < MIN_MINUTES) return null;
+    // Değeri 0 olan (ekranda 0 ya da 0,00 görünen) istatistik sıralamaya girmez: kalecinin 0 ofsaytı "ilk %1" değildir
+    if (s.per90 === null || s.minutes < MIN_MINUTES || s.total < 0.005) return null;
     return topShare(benchPer90(bench, row.key, isExtraKey), s.per90);
   }
   const r = successRate(games, row.won, row.other, row.mode);
-  if (r.rate === null || r.total < MIN_ATTEMPTS) return null;
+  if (r.rate === null || r.total < MIN_ATTEMPTS || r.won === 0) return null;
   return topShare(benchRates(bench, row.won, row.other, row.mode), r.rate);
 }
 
@@ -785,8 +786,12 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
                                   <span className="inline-flex size-6 items-center justify-center rounded-full border-[1.5px] border-foreground bg-[var(--yellow)] font-black text-foreground">
                                     {cell.text}
                                   </span>
-                                ) : (
+                                ) : cell.zero ? (
                                   cell.text
+                                ) : (
+                                  <span className={cn("inline-block min-w-6 rounded-full border-[1.5px] border-foreground px-1.5 text-center font-bold text-foreground", c.keys.some((k) => LOWER_IS_BETTER.has(k)) ? "bg-[#ffc2dc]" : "bg-[#b9f5df]")}>
+                                    {cell.text}
+                                  </span>
                                 )}
                               </td>
                             );

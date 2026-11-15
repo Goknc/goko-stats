@@ -43,9 +43,10 @@ export function benchRates(players: BenchPlayer[], won: AnyStatKey, other: AnySt
   return out;
 }
 
-// Oyuncudan yüksek değerli akranların oranı (0 = en iyisi). Az akran varsa null.
+// Oyuncudan yüksek değerli akranların oranı (0 = en iyisi). Az akran varsa ya da oyuncunun değeri 0 ise null
+// (herkesin 0 olduğu istatistikte 0 değerli oyuncu "ilk %1" görünmesin).
 export function topShare(peers: number[], value: number): number | null {
-  if (peers.length < MIN_PEERS) return null;
+  if (peers.length < MIN_PEERS || value <= 0) return null;
   const above = peers.filter((v) => v > value + 1e-9).length;
   return above / peers.length;
 }
