@@ -48,7 +48,7 @@ function shortName(name: string): string {
 const cellColor = (hit: boolean | null) =>
   hit === null ? "bg-secondary text-muted-foreground" : hit ? "bg-[var(--hit-block)] text-white" : "bg-[var(--miss-block)] text-white";
 
-const CELL = "size-4 rounded-[4px] text-[10px] sm:size-[18px] sm:text-[11px]";
+const CELL = "size-[14px] rounded-[3px] text-[9px] sm:size-[18px] sm:rounded-[4px] sm:text-[11px]";
 
 // Oyuncunun son maçları: 5'erli satırlar, en soldaki en son maç. Verisi az ya da hiç olmayan oyuncuda boş yerler
 // gösterilir; böylece bütün kutular aynı boyda kalır ve saha hizası kaymaz.
@@ -57,7 +57,7 @@ function Squares({ row, size }: { row: BoardRow | null; size: number }) {
   return (
     <span
       title={cells.length ? undefined : "Bu oyuncunun seçilen maçlarda verisi yok"}
-      className="mt-1 grid grid-cols-5 gap-[2px] rounded-md border-[1.5px] border-foreground bg-white p-[3px]"
+      className="mt-1 grid grid-cols-5 gap-[2px] rounded-lg border-[1.5px] border-foreground bg-white p-1 sm:p-[5px]"
     >
       {cells.map((c) => (
         <span
@@ -77,7 +77,7 @@ function Squares({ row, size }: { row: BoardRow | null; size: number }) {
 
 function PitchPlayer({ p, row, size }: { p: LineupPlayer; row: BoardRow | null; size: number | null }) {
   return (
-    <Link href={`/players/${p.id}`} title={p.injury ? `${p.name} · ${p.injury}` : p.name} className="group flex w-[5.6rem] flex-col items-center sm:w-[6.75rem]">
+    <Link href={`/players/${p.id}`} title={p.injury ? `${p.name} · ${p.injury}` : p.name} className="group flex w-[5.6rem] flex-col items-center sm:w-[7rem]">
       <span className="relative">
         <span className="photocard overflow-hidden border-2 shadow-[2px_2px_0_var(--ink)] transition-transform group-hover:-translate-y-1 group-hover:-rotate-6">
           <PlayerPhoto id={p.id} name={p.name} size={52} className="size-11 sm:size-[52px]" />
