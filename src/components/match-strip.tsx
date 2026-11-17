@@ -1,4 +1,5 @@
-// Maç şeridi: form şeridinin geniş hali. Her kutucukta rakibin logosu ve takımın gözünden skor;
+// Maç şeridi: form şeridinin geniş hali. Her kutucukta rakibin logosu ve takımın gözünden skor
+// (oyuncu trendlerinde skor yerine oyuncunun o maçtaki değeri: kaç şut, kaç faul...);
 // trend gerçekleştiyse nane yeşili, gerçekleşmediyse pembe, veri yoksa gri. SOLDAN SAĞA YENİDEN ESKİYE: en soldaki en son maç.
 // Kutucuklar esner (10-15-20 maç alana yayılır); sığmazsa yana kayar ve kaydırma soldan, en yeni maçtan başlar.
 // StripGroup içindeyse aynı gruptaki şeritler birlikte kayar.
@@ -8,7 +9,8 @@ import type { EvidenceRow } from "@/lib/analysis";
 import { cn } from "@/lib/utils";
 
 // slots: şeridin ayıracağı kutucuk sayısı (alt alta iki şerit hizalı kalsın diye); eksikler boş yer tutar
-export function MatchStrip({ evidence, slots = 0 }: { evidence: EvidenceRow[]; slots?: number }) {
+// show: "score" takımın gözünden skor, "value" oyuncunun o maçtaki sayısı (oyuncu trendleri)
+export function MatchStrip({ evidence, slots = 0, show = "score" }: { evidence: EvidenceRow[]; slots?: number; show?: "score" | "value" }) {
   const hits = evidence.filter((e) => e.outcome === true).length;
   const total = evidence.filter((e) => e.outcome !== null).length;
 
@@ -24,7 +26,7 @@ export function MatchStrip({ evidence, slots = 0 }: { evidence: EvidenceRow[]; s
         <Link
           key={e.matchId}
           href={`/matches/${e.matchId}`}
-          title={e.label}
+          title={show === "value" && e.score ? `${e.label} · ${e.score}` : e.label}
           className={cn(
             // Poster teması: mini photocard. Üstüne gelince eğilir.
             "relative flex min-w-[38px] max-w-14 flex-1 basis-0 flex-col items-center gap-0.5 rounded-xl border-2 border-foreground px-0.5 pb-1 pt-1.5 transition-transform hover:-translate-y-1 hover:-rotate-3",
@@ -36,7 +38,11 @@ export function MatchStrip({ evidence, slots = 0 }: { evidence: EvidenceRow[]; s
           ) : (
             <span className="size-6" />
           )}
-          <span className="poster text-sm leading-none tabular-nums">{e.score ?? "–"}</span>
+          {show === "value" ? (
+            <span className="poster text-base leading-none tabular-nums">{e.value ?? "–"}</span>
+          ) : (
+            <span className="poster text-sm leading-none tabular-nums">{e.score ?? "–"}</span>
+          )}
           {/* En yeni maç işareti */}
           {i === 0 && <span className="absolute -right-1 -top-1.5 size-3 rounded-full border-2 border-foreground bg-[var(--yellow)]" />}
         </Link>

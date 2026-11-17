@@ -5,7 +5,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import type { LineupPlayer, LineupSource, TeamLineup } from "@/lib/lineup";
 import type { BoardPlayer } from "@/lib/player-board";
@@ -72,6 +72,30 @@ function Squares({ row, size }: { row: BoardRow | null; size: number }) {
         <span key={`empty-${i}`} aria-hidden="true" className={cn("border border-dashed border-foreground/25", CELL)} />
       ))}
     </span>
+  );
+}
+
+// Hatlar: hepsi en geniş hat kadar genişlikte bir iç kutuda, kendi içinde ortalı. Dar ekranda 5 kişilik hat sığmazsa saha
+// yana kayar; kaydırma ortadan başlar ki az kişili hatlar (forvet, kaleci) ekranın ortasında görünsün.
+function PitchRows({ rows, render }: { rows: LineupPlayer[][]; render: (p: LineupPlayer) => React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+  }, []);
+  return (
+    <div ref={ref} className="relative overflow-x-auto px-1 pb-4 pt-5 sm:px-3">
+      <div className="flex w-max min-w-full flex-col gap-4 sm:gap-5">
+        {rows.map(
+          (row, i) =>
+            row.length > 0 && (
+              <div key={i} className="flex items-start justify-center gap-1.5 sm:justify-evenly sm:gap-1">
+                {row.map(render)}
+              </div>
+            ),
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -156,19 +180,7 @@ function TeamPitch({
         <div className="absolute left-1/2 top-0 size-28 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white/80" aria-hidden="true" />
         <div className="absolute bottom-0 left-1/2 h-20 w-[58%] -translate-x-1/2 border-[3px] border-b-0 border-white/80" aria-hidden="true" />
         <div className="absolute bottom-0 left-1/2 h-9 w-[28%] -translate-x-1/2 border-[3px] border-b-0 border-white/80" aria-hidden="true" />
-        {/* Dar ekranda 5 kişilik hat sığmazsa saha kendi içinde yana kayar */}
-        <div className="relative flex flex-col gap-4 overflow-x-auto px-1 pb-4 pt-5 sm:gap-5 sm:px-3">
-          {[rows.attack, rows.midfield, rows.defence, rows.keeper].map(
-            (row, i) =>
-              row.length > 0 && (
-                <div key={i} className="flex min-w-max items-start justify-evenly gap-1">
-                  {row.map((p) => (
-                    <PitchPlayer key={p.id} p={p} row={rowOf(p.id)} size={shared.size} />
-                  ))}
-                </div>
-              ),
-          )}
-        </div>
+        <PitchRows rows={[rows.attack, rows.midfield, rows.defence, rows.keeper]} render={(p) => <PitchPlayer key={p.id} p={p} row={rowOf(p.id)} size={shared.size} />} />
       </div>
 
       {lineup.bench.length > 0 && (

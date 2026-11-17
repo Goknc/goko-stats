@@ -17,16 +17,17 @@ export function Segment<T extends string | number>({
   label, options, current, href,
 }: { label: string; options: { value: T; text: string }[]; current: T; href: (v: T) => string }) {
   return (
-    <div className="flex items-center gap-2 text-sm">
+    // Mobilde etiket üstte, seçenekler altında (etiketler hizalı kalır); geniş ekranda yan yana
+    <div className="flex flex-col items-start gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
       <span className="poster text-base">{label}</span>
-      <div className="flex flex-wrap rounded-3xl border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)]">
+      <div className="flex flex-wrap rounded-2xl border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)] sm:rounded-3xl">
         {options.map((o) => (
           <Link
             key={o.value}
             href={href(o.value)}
             scroll={false}
             className={cn(
-              "rounded-full px-3.5 py-1 font-bold whitespace-nowrap transition-colors",
+              "rounded-full px-2.5 py-1 font-bold whitespace-nowrap transition-colors sm:px-3.5",
               current === o.value ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground",
             )}
           >

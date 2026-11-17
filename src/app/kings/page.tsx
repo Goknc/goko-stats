@@ -83,7 +83,8 @@ export default async function KingsPage({ searchParams }: { searchParams: Promis
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Mobilde dört seçim alt alta, geniş ekranda yan yana */}
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <FilterSelect
           label="Lig"
           selected={league ? String(league.id) : "all"}

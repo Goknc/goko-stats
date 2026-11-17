@@ -263,7 +263,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
               <CardTitle className="text-xl">Form</CardTitle>
               <p className="text-sm text-muted-foreground">Seçilen son maçlar. Şeritte en soldaki kutucuk en son maçtır; yeşil galibiyet, sarı beraberlik, pembe mağlubiyet.</p>
             </CardHeader>
-            <CardContent className="grid gap-5 lg:grid-cols-2">
+            <CardContent className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[repeat(2,minmax(0,1fr))]">
               {[
                 { data: dataA, p: pa, pop: "var(--blue)" },
                 { data: dataB, p: pb, pop: "var(--pink)" },

@@ -40,7 +40,7 @@ export function SiteFooter() {
 
         <div>
           <ColumnTitle>Sayfalar</ColumnTitle>
-          <ul className="poster grid grid-cols-2 gap-y-1 text-2xl sm:grid-cols-1">
+          <ul className="poster grid gap-y-1 text-2xl">
             {LINKS.map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="text-white transition-colors hover:text-[var(--pink)]">
@@ -77,10 +77,6 @@ export function SiteFooter() {
           <p>
             Bu sitedeki hiçbir içerik bahis ya da şans oyunu tavsiyesi değildir ve bahse teşvik amacı taşımaz; sitede bahis bağlantısı,
             reklamı veya oran bilgisi yer almaz. Skor tahminleri istatistiksel model çıktısıdır.
-          </p>
-          <p>
-            Takım logoları, oyuncu fotoğrafları, kulüp, lig ve turnuva adları sahiplerine aittir. Gokostats hiçbir kulüp, lig, federasyon
-            veya veri sağlayıcıyla bağlantılı değildir.
           </p>
         </div>
       </div>

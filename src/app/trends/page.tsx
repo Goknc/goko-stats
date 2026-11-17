@@ -13,6 +13,7 @@ import { dayRange, formatLongDate, formatTime, matchDayKey, parseDateParam } fro
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MatchStrip } from "@/components/match-strip";
+import { PlayerPhoto } from "@/components/entity-image";
 import { StripGroup } from "@/components/strip-group";
 import { RatePercent } from "@/components/rate-percent";
 import { FilterSelect } from "@/components/filter-select";
@@ -26,6 +27,7 @@ export const metadata = { title: { absolute: "Günün trendleri · Gokostats" } 
 // note: tek takıma bakan trendlerde satırın açıklaması ("Kazandı" / "Kaybetti").
 interface Line {
   label: string;
+  playerId?: number; // oyuncu trendi: etiketin yanında fotoğraf, şeritte skor yerine oyuncunun sayısı
   hits: number;
   total: number;
   rate: number | null;
@@ -93,12 +95,19 @@ function PickRow({ pick, showTrend = false }: { pick: Pick; showTrend?: boolean 
             key={line.label}
             className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 lg:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_3.5rem_4.75rem]"
           >
-            <span className="min-w-0 truncate font-semibold">
-              {line.label}
-              {line.note && <span className="ml-1.5 text-xs font-semibold text-muted-foreground">{line.note}</span>}
+            <span className="flex min-w-0 items-center gap-2 font-semibold">
+              {line.playerId !== undefined && (
+                <span className="photocard shrink-0 overflow-hidden">
+                  <PlayerPhoto id={line.playerId} name={line.label} size={30} />
+                </span>
+              )}
+              <span className="min-w-0 truncate">
+                {line.label}
+                {line.note && <span className="ml-1.5 text-xs font-semibold text-muted-foreground">{line.note}</span>}
+              </span>
             </span>
             <div className="order-last col-span-full min-w-0 lg:order-none lg:col-span-1">
-              <MatchStrip evidence={line.evidence} slots={slots} />
+              <MatchStrip evidence={line.evidence} slots={slots} show={line.playerId !== undefined ? "value" : "score"} />
             </div>
             <span className="text-right text-sm tabular-nums text-muted-foreground">
               {line.hits}/{line.total}
@@ -160,7 +169,7 @@ export default async function RecommendationsPage({
         ...base,
         code: p.code,
         trendName: trendName.get(p.code) ?? p.name,
-        lines: [toLine(`${p.playerName} (${team})`, p.summary)],
+        lines: [{ ...toLine(`${p.playerName} (${team})`, p.summary), playerId: p.playerId }],
         rate: p.summary.rate ?? 0,
         sample: p.summary.total,
       });
@@ -222,7 +231,7 @@ export default async function RecommendationsPage({
             ].filter((g) => g.options.length > 0)}
           />
           <div className="flex items-center gap-2 text-sm">
-            <span className="font-bold">Sırala</span>
+            <span className="hidden font-bold sm:inline">Sırala</span>
             <div className="flex rounded-full border-2 border-foreground bg-white p-1 shadow-[3px_3px_0_var(--ink)]">
               {SORTS.map((o) => (
                 <Link

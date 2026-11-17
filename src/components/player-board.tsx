@@ -1,4 +1,4 @@
-// Maç detayı, oyuncu eşik tablosu: iki kadronun oyuncuları alt alta, seçilen istatistikte son N maçı kutucuk kutucuk.
+// Maç detayı, oyuncu eşik tablosu: iki takımın ilk 11'i alt alta, seçilen istatistikte son N maçı kutucuk kutucuk.
 // Kutucukta o maçtaki değer; eşiği geçtiyse yeşil, geçemediyse kırmızı, veri yoksa gri. En soldaki kutucuk en son maçtır.
 // İstatistik, maç sayısı, eşik ve filtreler sayfa yenilenmeden değişir (hesap engine/player-board).
 "use client";
@@ -68,7 +68,6 @@ export function PlayerBoard({ home, away, players, national }: PlayerBoardProps)
   const [nationalOnly, setNationalOnly] = useState(national);
   const [startsOnly, setStartsOnly] = useState(false);
   const [side, setSide] = useState<"both" | "home" | "away">("both");
-  const [withBench, setWithBench] = useState(false);
 
   const pickStat = (key: BoardStat) => {
     setStat(key);
@@ -78,13 +77,13 @@ export function PlayerBoard({ home, away, players, national }: PlayerBoardProps)
   const rows = useMemo(() => {
     const filter: BoardFilter = { stat, line, size, venue, nationalOnly, startsOnly };
     return players
-      .filter((p) => (side === "both" || p.side === side) && (withBench || p.starter))
+      .filter((p) => p.starter && (side === "both" || p.side === side))
       .map((p) => ({ player: p, row: boardRow(p.games, filter) }))
       .sort(
         (a, b) =>
           (b.row.rate ?? -1) - (a.row.rate ?? -1) || b.row.total - a.row.total || a.player.name.localeCompare(b.player.name, "tr"),
       );
-  }, [players, stat, line, size, venue, nationalOnly, startsOnly, side, withBench]);
+  }, [players, stat, line, size, venue, nationalOnly, startsOnly, side]);
 
   const statLabel = BOARD_STATS.find((s) => s.key === stat)!.label;
   const teamOf = (p: BoardPlayer) => (p.side === "home" ? home : away);
@@ -136,7 +135,6 @@ export function PlayerBoard({ home, away, players, national }: PlayerBoardProps)
         />
         <Check checked={nationalOnly} onChange={setNationalOnly}>Yalnızca milli takım</Check>
         <Check checked={startsOnly} onChange={setStartsOnly}>Yalnızca ilk 11</Check>
-        <Check checked={withBench} onChange={setWithBench}>Yedekler de</Check>
       </div>
 
       <p className="text-sm text-muted-foreground">
@@ -149,7 +147,7 @@ export function PlayerBoard({ home, away, players, national }: PlayerBoardProps)
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b-2 border-foreground bg-secondary/70 text-left">
-              <th className="sticky left-0 z-10 bg-secondary px-3 py-2 font-bold">Oyuncu</th>
+              <th className="px-3 py-2 font-bold">Oyuncu</th>
               <th className="px-2 py-2 font-bold">Son {size} maç</th>
               <th className="px-3 py-2 text-right font-bold">Tutan</th>
             </tr>
@@ -157,7 +155,7 @@ export function PlayerBoard({ home, away, players, national }: PlayerBoardProps)
           <tbody>
             {rows.map(({ player: p, row }) => (
               <tr key={p.id} className="border-b border-foreground/15 last:border-0">
-                <td className="sticky left-0 z-10 bg-white px-3 py-2">
+                <td className="px-3 py-2">
                   <Link href={`/players/${p.id}`} className="flex min-w-40 items-center gap-2 hover:text-primary">
                     <span className="relative shrink-0">
                       <PlayerPhoto id={p.id} name={p.name} size={34} />
@@ -170,7 +168,6 @@ export function PlayerBoard({ home, away, players, national }: PlayerBoardProps)
                       <span className="text-xs font-semibold text-muted-foreground">
                         {p.jerseyNumber !== null && `#${p.jerseyNumber} · `}
                         {(p.position && POSITIONS[p.position]) ?? "–"}
-                        {!p.starter && " · yedek"}
                       </span>
                     </span>
                   </Link>

@@ -513,7 +513,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
               {hl.length === 0 ? (
                 <p className="text-muted-foreground">Öne çıkan özelliklerin hesaplanması için ilk 11 başladığı en az 5 maç gerekiyor.</p>
               ) : (
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[repeat(2,minmax(0,1fr))]">
                   {hl.map((h) => (
                     <div
                       key={h.code}
@@ -601,7 +601,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
               {extrasCount === 0 ? (
                 <p className="text-muted-foreground">Bu maçlar için detaylı istatistik (pas, ikili mücadele, hava topu gibi) henüz yok.</p>
               ) : (
-                <div className="grid gap-6 xl:grid-cols-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[repeat(2,minmax(0,1fr))]">
                   {detailGroups.map((grp) => {
                     const style = GROUP_STYLE[grp.title] ?? GROUP_STYLE["Hücum"];
                     const Icon = style.icon;

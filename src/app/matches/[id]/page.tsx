@@ -51,11 +51,12 @@ const formatDateTime = (d: Date) =>
   d.toLocaleString("tr-TR", { timeZone: TZ, day: "numeric", month: "long", weekday: "long", hour: "2-digit", minute: "2-digit" });
 
 // Karne satırı: üstte etiket, x/y ve vurgulu yüzde (az maç varsa belirtilir); altta tam genişlikte maç şeridi
-function RateLine({ label, s, slots }: { label: React.ReactNode; s: RateSummary; slots: number }) {
+// show: oyuncu trendlerinde kutucukta skor yerine oyuncunun o maçtaki sayısı
+function RateLine({ label, s, slots, show = "score" }: { label: React.ReactNode; s: RateSummary; slots: number; show?: "score" | "value" }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <span className="min-w-0 flex-1 truncate text-lg font-bold">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-base font-bold sm:text-lg">{label}</span>
         {s.total === 0 ? (
           <span className="text-sm text-muted-foreground">Veri yok</span>
         ) : (
@@ -66,12 +67,12 @@ function RateLine({ label, s, slots }: { label: React.ReactNode; s: RateSummary;
             {s.lowSample ? (
               <span className="rounded-full border-2 border-foreground bg-white px-2 text-xs font-bold">Az maç</span>
             ) : (
-              <RatePercent rate={s.rate} className="poster w-20 text-right text-3xl font-normal" />
+              <RatePercent rate={s.rate} className="poster text-right text-2xl font-normal sm:w-20 sm:text-3xl" />
             )}
           </>
         )}
       </div>
-      {s.total > 0 && <MatchStrip evidence={s.evidence} slots={slots} />}
+      {s.total > 0 && <MatchStrip evidence={s.evidence} slots={slots} show={show} />}
     </div>
   );
 }
@@ -285,7 +286,7 @@ export default async function MatchDetailPage({
               );
             })}
             {playerPicks.length > 0 && (
-              <div className="grid gap-6 xl:grid-cols-2">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[repeat(2,minmax(0,1fr))]">
                 {playerPicks.map((p, i) => (
                   <article
                     key={`${p.playerId}-${p.code}`}
@@ -300,13 +301,14 @@ export default async function MatchDetailPage({
                       label={
                         <Link href={`/players/${p.playerId}`} className="flex min-w-0 items-center gap-3 hover:text-primary">
                           <span className="photocard overflow-hidden">
-                            <PlayerPhoto id={p.playerId} name={p.playerName} size={52} />
+                            <PlayerPhoto id={p.playerId} name={p.playerName} size={52} className="size-10 sm:size-[52px]" />
                           </span>
                           <span className="truncate">{p.playerName}</span>
                         </Link>
                       }
                       s={p.summary}
                       slots={0}
+                      show="value"
                     />
                   </article>
                 ))}

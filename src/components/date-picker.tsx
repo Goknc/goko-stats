@@ -50,7 +50,7 @@ export function DatePicker({ date, onChange }: { date: string; onChange: (d: str
             isToday && "border-[var(--yellow)] bg-[var(--yellow)]",
           )}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="hidden sm:block">
             <rect x="3" y="5" width="18" height="16" rx="2" />
             <path d="M3 10h18M8 3v4M16 3v4" />
           </svg>
