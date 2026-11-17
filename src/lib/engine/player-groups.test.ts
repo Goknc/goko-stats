@@ -11,7 +11,7 @@ function mk(code: string, statKey: string, line: number, threshold: number, rate
 }
 const player = (playerId: number, name: string, trends: GroupTrend[]): GroupPlayer => ({ playerId, name, trends });
 
-// Barcelona ekran görüntüsündeki gerçek oranlar
+// Gerçek bir takımın (Barcelona) oranları
 const yamal = player(1, "Lamine Yamal", [
   mk("P_SOT1", "shotsOnTarget", 1, 0.9, 0.8),
   mk("P_SOT2", "shotsOnTarget", 2, 0.6, 0.6, { recommended: true }),

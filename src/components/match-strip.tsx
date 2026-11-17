@@ -28,7 +28,6 @@ export function MatchStrip({ evidence, slots = 0, show = "score" }: { evidence: 
           href={`/matches/${e.matchId}`}
           title={show === "value" && e.score ? `${e.label} · ${e.score}` : e.label}
           className={cn(
-            // Poster teması: mini photocard. Üstüne gelince eğilir.
             "relative flex min-w-[38px] max-w-14 flex-1 basis-0 flex-col items-center gap-0.5 rounded-xl border-2 border-foreground px-0.5 pb-1 pt-1.5 transition-transform hover:-translate-y-1 hover:-rotate-3",
             e.outcome === null ? "bg-unknown" : e.outcome ? "bg-[#b9f5df]" : "bg-[#ffc2dc]",
           )}

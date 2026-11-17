@@ -1,11 +1,6 @@
-// playwright.config.ts
-// Uçtan uca testler: gerçek veritabanıyla, production build'e karşı (3100 portunda).
-// Production: sayfalar önceden derlenir; dev sunucusunun Windows'taki EPERM dosya kilidi sorunları olmaz.
-// Çalıştırma: npm run test:e2e      → önce next build, sonra testler (sunucu: next start -p 3100)
-//             npm run test:e2e:dev  → açık olan npm run dev'e karşı (hızlı deneme için)
+// Uçtan uca testler. npm run test:e2e: production build'e karşı (port 3100); npm run test:e2e:dev: açık dev sunucusuna karşı.
 import { defineConfig, devices } from "@playwright/test";
 
-// npm run test:e2e:dev ile çalıştırılınca npm bu değişkeni kendisi verir (Windows'ta da çalışır)
 const useDev = process.env.npm_lifecycle_event === "test:e2e:dev" || process.env.E2E_DEV === "1";
 const PORT = useDev ? 3000 : 3100;
 
