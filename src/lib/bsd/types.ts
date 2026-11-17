@@ -2,7 +2,7 @@
 // BSD API yanıt tipleri. Yalnızca kullandığımız alanlar tanımlı.
 
 export interface BsdPage<T> {
-  count: number; // güvenilmez (Spike B1), kullanma
+  count: number; // güvenilmez, kullanma
   next: string | null;
   results: T[];
 }
@@ -41,7 +41,7 @@ export interface BsdEvent {
 export interface BsdTeamStats {
   corner_kicks: number | null;
   yellow_cards: number | null;
-  red_cards?: number | null; // kart yoksa null veya hiç gelmeyebilir (Spike B5)
+  red_cards?: number | null; // kart yoksa null veya hiç gelmeyebilir
   total_shots: number | null;
   shots_on_target: number | null;
   fouls: number | null;
@@ -59,7 +59,7 @@ export interface BsdEventStats {
 }
 
 export interface BsdPlayerStat {
-  player_id: number | null; // bazı oyuncular id'siz gelir (B8)
+  player_id: number | null; // bazı oyuncular id'siz gelir
   team_id: number;
   minutes_played: number;
   goals: number;
@@ -111,9 +111,18 @@ export interface BsdPlayerStats {
 }
 
 export interface BsdLineupPlayer {
-  id: number | null; // bazı oyuncular id'siz gelir (B8)
+  id: number | null; // bazı oyuncular id'siz gelir
   name: string;
   position: string | null;
+  jersey_number?: number | null;
+}
+
+// Maç öncesi sakat / cezalı listesi (status: injured, suspended...)
+export interface BsdUnavailablePlayer {
+  id: number | null;
+  name: string;
+  status: string | null;
+  reason: string | null;
 }
 
 export interface BsdLineupSide {
@@ -126,6 +135,7 @@ export interface BsdLineups {
   event_id: number;
   lineup_status: "confirmed" | "predicted" | "unavailable";
   lineups: { home: BsdLineupSide; away: BsdLineupSide } | null;
+  unavailable_players?: { home?: BsdUnavailablePlayer[]; away?: BsdUnavailablePlayer[] } | null;
 }
 
 export interface BsdSeason {

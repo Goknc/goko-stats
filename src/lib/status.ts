@@ -1,5 +1,5 @@
 // src/lib/status.ts
-// BSD durum değerlerini ekran etiketine çevirir (Spike B4, B7)
+// BSD durum değerlerini ekran etiketine çevirir
 export function statusLabel(status: string): string {
   switch (status) {
     case "notstarted":
@@ -11,7 +11,7 @@ export function statusLabel(status: string): string {
     case "postponed":
       return "Ertelendi";
     case "cancelled":
-    case "canceled": // B7: aynı durum iki yazımla geliyor
+    case "canceled": // aynı durum iki yazımla geliyor
       return "İptal";
     case "unresolved":
       return "Sonuç yok";

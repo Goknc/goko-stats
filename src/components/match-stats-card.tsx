@@ -53,7 +53,7 @@ export function MatchStatsCard({ stats, homeId, awayId, homeName, awayName }: Ma
   const home = row(period, homeId)!;
   const away = row(period, awayId)!;
 
-  // Kırmızı kart bilgisi yoksa (B5) 0 sayılır; diğer istatistiklerde null "veri yok"
+  // Kırmızı kart bilgisi yoksa 0 sayılır; diğer istatistiklerde null "veri yok"
   const value = (s: TeamStatLine, key: StatKey) => (key === "redCards" ? (s.redCards ?? 0) : (s[key] ?? null));
 
   return (

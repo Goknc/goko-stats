@@ -4,15 +4,15 @@ name: Data sync
 
 on:
   schedule:
-    - cron: "0 9 * * *" # daily: seasons, fixtures/results, match & player stats, lineups for the next 48 h
-    - cron: "30 */3 * * *" # every 3 h: lineups of matches starting soon
-    - cron: "0 4 * * 1" # weekly (Monday): player profiles (market value, injuries, contracts) + careers/transfers
+    - cron: "0 9 * * *" # daily: seasons, fixtures/results, match & player stats, lineups for the next 48 h, then careers/transfers
+    - cron: "20 * * * *" # hourly: lineups + injury/suspension lists of matches starting in the next 3 h (confirmed XIs come ~1 h before kick-off)
+    - cron: "0 4 * * 1" # weekly (Monday): player profiles (market value, injuries, contracts, shirt numbers) + careers/transfers
   workflow_dispatch:
     inputs:
       job:
         description: "Which sync to run"
         type: choice
-        options: [daily, lineups, players]
+        options: [daily, lineups, players, careers]
         default: daily
 
 concurrency:
@@ -52,8 +52,12 @@ jobs:
       - name: Daily sync
         if: steps.secrets.outputs.ready == 'true' && (github.event.schedule == '0 9 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'daily'))
         run: npm run sync:daily
+      # Kariyer ve transfer geçmişi henüz çekilmemiş oyuncular, en çok oynayandan başlayarak (oyuncu başına 2 istek)
+      - name: Careers
+        if: steps.secrets.outputs.ready == 'true' && (github.event.schedule == '0 9 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'careers'))
+        run: npm run sync:careers
       - name: Lineups
-        if: steps.secrets.outputs.ready == 'true' && (github.event.schedule == '30 */3 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'lineups'))
+        if: steps.secrets.outputs.ready == 'true' && (github.event.schedule == '20 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'lineups'))
         run: npm run sync:lineups
       - name: Player profiles
         if: steps.secrets.outputs.ready == 'true' && (github.event.schedule == '0 4 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.job == 'players'))

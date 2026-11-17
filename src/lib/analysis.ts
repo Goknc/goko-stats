@@ -225,7 +225,7 @@ export async function playerHistory(playerIds: number[], from: Date, to: Date): 
   });
   const matchIds = [...new Set(stats.map((s) => s.matchId))];
 
-  // Hangi maçta hangi takımın kadrosu biliniyor (B9: arşiv maçlarında kadro id'siz gelir, kaydedilemez)
+  // Hangi maçta hangi takımın kadrosu biliniyor (arşiv maçlarında kadro id'siz gelir, kaydedilemez)
   const knownLineups = await prisma.matchLineup.findMany({
     where: { matchId: { in: matchIds } },
     select: { matchId: true, teamId: true },
@@ -355,8 +355,8 @@ async function computeAnalysis(matchId: number, options: AnalysisOptions = {}): 
   // Oyuncu trendleri: yalnızca oyuncu verisi açık liglerde
   const playerTrends: PlayerTrendResult[] = [];
   const [homeSquad, awaySquad] = await Promise.all([
-    loadTeamLineup(match.id, match.homeTeamId, match.eventDate),
-    loadTeamLineup(match.id, match.awayTeamId, match.eventDate),
+    loadTeamLineup(match.id, match.homeTeamId, match.eventDate, match.leagueId),
+    loadTeamLineup(match.id, match.awayTeamId, match.eventDate, match.leagueId),
   ]);
   const lineups: MatchAnalysis["lineups"] = { home: homeSquad.source, away: awaySquad.source };
   const playerInfo: Record<number, PlayerInfo> = {};

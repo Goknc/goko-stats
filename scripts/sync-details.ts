@@ -45,7 +45,7 @@ function teamStatRow(matchId: number, teamId: number, period: PeriodCode, isHome
 }
 
 async function saveDetails(m: MatchRef, stats: BsdEventStats, ps: BsdPlayerStats, lu: BsdLineups) {
-  // B8: id'siz oyuncular atlanır, takip edilemezler
+  // id'siz oyuncular atlanır, takip edilemezler
   const playerStats = (ps.player_stats ?? []).filter(
     (p) => p.player_id != null,
   ) as (BsdPlayerStat & { player_id: number })[];
@@ -64,7 +64,7 @@ async function saveDetails(m: MatchRef, stats: BsdEventStats, ps: BsdPlayerStats
       teamRows.push(teamStatRow(m.id, m.homeTeamId, "H2", true, s.second_half.home));
       teamRows.push(teamStatRow(m.id, m.awayTeamId, "H2", false, s.second_half.away));
     }
-    // Spike B5: takım kırmızı kartı null ise oyuncu kartlarının toplamını kullan
+    // Takım kırmızı kartı null ise oyuncu kartlarının toplamını kullan
     for (const row of teamRows) {
       if (row.period === "FULL" && row.redCards === null && playerStats.length > 0) {
         row.redCards = playerStats
@@ -74,7 +74,7 @@ async function saveDetails(m: MatchRef, stats: BsdEventStats, ps: BsdPlayerStats
     }
   }
 
-  // Kadro: ilk 11 + yedekler (B8: id'siz oyuncular atlanır)
+  // Kadro: ilk 11 + yedekler (id'siz oyuncular atlanır)
   const lineupEntries = (
     lu.lineups && lu.lineup_status !== "unavailable"
       ? (["home", "away"] as const).flatMap((side) => {
@@ -116,6 +116,7 @@ async function saveDetails(m: MatchRef, stats: BsdEventStats, ps: BsdPlayerStats
             playerId: e.player.id,
             isStarter: e.isStarter,
             lineupStatus: lu.lineup_status === "confirmed" ? "CONFIRMED" : "PREDICTED",
+            jerseyNumber: e.player.jersey_number ?? null,
           })),
         });
       }

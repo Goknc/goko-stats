@@ -15,7 +15,7 @@ export const RED_CARD_WEIGHT = 2;
 
 export function teamCards(r: StatRow): number | null {
   if (r.yellowCards === null) return null;
-  // Spike B5: kırmızı kart yoksa null gelir, 0 sayılır
+  // Kırmızı kart yoksa null gelir, 0 sayılır
   return r.yellowCards + RED_CARD_WEIGHT * (r.redCards ?? 0) - (r.secondYellows ?? 0);
 }
 

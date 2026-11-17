@@ -5,8 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { analysisOptions, DEFAULT_SAMPLE, sampleFromParams, sampleParams, type SampleSettings } from "@/lib/app-settings";
 import { SampleBar } from "@/components/sample-bar";
-import { analyzeMatch, type RateSummary, type LineupSource } from "@/lib/analysis";
-import { loadTeamLeaders } from "@/lib/lineup";
+import { analyzeMatch, type RateSummary } from "@/lib/analysis";
 import { sideCaption, trendTitle } from "@/lib/trend-labels";
 import { cn } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +19,7 @@ import { RatePercent } from "@/components/rate-percent";
 import { EvidenceTable } from "@/components/evidence-table";
 import { PlayerSection } from "@/components/player-section";
 import { TeamTrendGrid } from "@/components/team-trend-grid";
-import { LineupPitch } from "@/components/lineup-pitch";
+import { LineupPitch, SOURCE_LABEL } from "@/components/lineup-pitch";
 import { TeamAura } from "@/components/team-aura";
 import { LeagueLogo, PlayerPhoto, TeamLogo } from "@/components/entity-image";
 import { H2HCard } from "@/components/h2h-card";
@@ -30,6 +29,9 @@ import { loadH2HPlayers } from "@/lib/h2h-players-loader";
 import { PredictionCard } from "@/components/prediction-card";
 import { MatchStatsCard } from "@/components/match-stats-card";
 import { predictMatch } from "@/lib/prediction";
+import { PlayerBoard } from "@/components/player-board";
+import { loadPlayerBoard } from "@/lib/player-board";
+import { isNationalTeamLeague } from "@/lib/engine/leagues";
 
 export const dynamic = "force-dynamic";
 
@@ -45,16 +47,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const score = m.status === "finished" ? ` ${m.homeScore}-${m.awayScore} ` : " – ";
   return { title: { absolute: `${m.homeTeam.name}${score}${m.awayTeam.name} · Gokostats` } };
 }
-
-// Oyuncu kartlarının dayandığı kadro; kadro yoksa etiket de yok
-const LINEUP_LABELS: Record<LineupSource, { text: string; className: string } | null> = {
-  CONFIRMED: { text: "Kesin ilk 11", className: "bg-[#b9f5df]" },
-  PREDICTED: { text: "Tahmini ilk 11", className: "bg-[var(--yellow)]" },
-  PREVIOUS: { text: "Son maçın ilk 11'i", className: "bg-[#cfe0ff]" },
-  ESTIMATED: { text: "Tahmini ilk 11", className: "bg-[var(--yellow)]" },
-  SQUAD: { text: "Tahmini ilk 11", className: "bg-[var(--yellow)]" },
-  NONE: null,
-};
 
 const formatDateTime = (d: Date) =>
   d.toLocaleString("tr-TR", { timeZone: TZ, day: "numeric", month: "long", weekday: "long", hour: "2-digit", minute: "2-digit" });
@@ -92,6 +84,7 @@ const SECTIONS = [
   { id: "aralarinda", label: "Aralarında" },
   { id: "takimlar", label: "Takımlar" },
   { id: "kadrolar", label: "Kadrolar" },
+  { id: "tablo", label: "Oyuncu tablosu" },
   { id: "oyuncular", label: "Oyuncular" },
 ];
 const POPS = ["var(--purple)", "var(--pink)", "var(--blue)", "var(--yellow)"];
@@ -124,9 +117,7 @@ export default async function MatchDetailPage({
   };
 
   const generalForm = sample.teamMode === "all";
-  const squadIds = (l: (typeof a.squads)["home"]) => [...l.starters, ...l.bench].map((p) => p.id);
-
-  const [match, h2h, prediction, h2hPlayers, homeLeaders, awayLeaders] = await Promise.all([
+  const [match, h2h, prediction, h2hPlayers, board] = await Promise.all([
     prisma.match.findUnique({
       where: { id: a.matchId },
       include: {
@@ -141,8 +132,7 @@ export default async function MatchDetailPage({
     loadHeadToHead(a.homeTeam.id, a.awayTeam.id, a.eventDate, h2hFilter),
     predictMatch(a.matchId),
     a.playerStatsEnabled ? loadH2HPlayers(a.homeTeam.id, a.awayTeam.id, a.eventDate) : null,
-    loadTeamLeaders(a.homeTeam.id, squadIds(a.squads.home), a.eventDate),
-    loadTeamLeaders(a.awayTeam.id, squadIds(a.squads.away), a.eventDate),
+    a.playerStatsEnabled ? loadPlayerBoard(a.squads, a.eventDate) : [],
   ]);
   const finished = match?.status === "finished";
   // Çevirisi olmayan ham durum kodları (1st_half gibi) gösterilmez
@@ -240,7 +230,7 @@ export default async function MatchDetailPage({
       {/* Atlama menüsü + analiz ayarı */}
       <div className="space-y-4">
         <nav className="flex flex-wrap gap-2" aria-label="Bölümler">
-          {SECTIONS.filter((x) => (x.id !== "tahmin" || prediction) && (x.id !== "kadrolar" || hasSquad)).map((x, i) => (
+          {SECTIONS.filter((x) => (x.id !== "tahmin" || prediction) && (x.id !== "kadrolar" || hasSquad) && (x.id !== "tablo" || board.length > 0)).map((x, i) => (
             <a
               key={x.id}
               href={`#${x.id}`}
@@ -399,7 +389,22 @@ export default async function MatchDetailPage({
       {/* Kadrolar: ilk 11 sahada, yedekler altında */}
       {hasSquad && (
         <section id="kadrolar" className="scroll-mt-36">
-          <LineupPitch home={a.homeTeam} away={a.awayTeam} squads={a.squads} leaders={{ ...homeLeaders, ...awayLeaders }} />
+          <LineupPitch home={a.homeTeam} away={a.awayTeam} squads={a.squads} />
+        </section>
+      )}
+
+      {/* Oyuncu eşik tablosu: seçilen istatistikte son maçlar kutucuk kutucuk */}
+      {board.length > 0 && (
+        <section id="tablo" className="scroll-mt-36">
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-xl">Oyuncu tablosu</CardTitle>
+              <p className="text-muted-foreground">İstatistiği, maç sayısını ve eşiği seç; her oyuncunun son maçlarında eşiği kaç kez geçtiğini gör.</p>
+            </CardHeader>
+            <CardContent>
+              <PlayerBoard home={a.homeTeam} away={a.awayTeam} players={board} national={isNationalTeamLeague(a.leagueId)} />
+            </CardContent>
+          </Card>
         </section>
       )}
 
@@ -421,7 +426,7 @@ export default async function MatchDetailPage({
                 key={team.id}
                 teamId={team.id}
                 teamName={team.name}
-                lineup={LINEUP_LABELS[source]}
+                lineup={source === "NONE" ? null : SOURCE_LABEL[source]}
                 trends={a.playerTrends.filter((p) => p.teamId === team.id)}
                 players={a.players}
               />

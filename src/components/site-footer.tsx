@@ -1,4 +1,4 @@
-// Tüm sayfaların altındaki footer: üç eşit sütun (hakkında · sayfalar · nasıl çalışır) ve bilgilendirme notu.
+// Tüm sayfaların altındaki footer: üç eşit sütun (hakkında · sayfalar · nasıl çalışır) ve yasal bilgilendirme notu.
 // Sayfa kısa olsa da en altta durması için layout'ta gövde flex-col + içerik flex-1 olmalı.
 import Link from "next/link";
 import { Logo, StatsMark } from "@/components/logo";
@@ -12,7 +12,7 @@ const LINKS = [
 ];
 
 const HOW = [
-  "Maç sonuçları ve istatistikler her gün, kadrolar maçtan önce birkaç saatte bir güncellenir.",
+  "Veriler Bzzoiro Sports Data API'si üzerinden otomatik çekilir: maç sonuçları ve istatistikler her gün, kadrolar maç öncesinde saatte bir güncellenir.",
   "Yüzdeler takımın ve oyuncunun son maçlarına dayanır; maç sayısı, saha, turnuva ve eşik sayfadan seçilebilir.",
   "Oyuncu ortalamaları ve oranları yalnızca ilk 11'de başladığı maçlardan hesaplanır.",
   "Seriler oyuncunun son maçından geriye doğru sayılır; 3 maç ve üzeri seriler gösterilir.",
@@ -33,7 +33,8 @@ export function SiteFooter() {
           </Link>
           <ColumnTitle>Hakkında</ColumnTitle>
           <p className="leading-relaxed text-white/70">
-            Gokostats, takımların ve oyuncuların son maçlarındaki istatistikleri bir araya getiren bir futbol istatistik sitesidir.
+            Gokostats, takımların ve oyuncuların son maçlarındaki istatistikleri bir araya getiren bir futbol istatistik sitesidir. Futbol
+            verisine ve veri analizine duyulan ilgiyle, proje amaçlı geliştirilmiş bağımsız ve ticari olmayan bir çalışmadır.
           </p>
         </div>
 
@@ -64,10 +65,24 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/15">
-        <p className="mx-auto max-w-[92rem] px-4 py-4 text-center text-xs leading-relaxed text-white/60">
-          Buradaki istatistikler geçmiş maçlara dayanır ve yalnızca bilgi amaçlıdır; hiçbir içerik bahis tavsiyesi değildir. Gokostats,
-          futbola duyduğum ilgiyle geliştirdiğim kişisel bir projedir.
-        </p>
+        <div className="mx-auto max-w-[92rem] space-y-1.5 px-4 py-4 text-center text-xs leading-relaxed text-white/60">
+          <p>
+            Tüm veriler{" "}
+            <a href="https://sports.bzzoiro.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-white">
+              Bzzoiro Sports Data
+            </a>{" "}
+            API&apos;si aracılığıyla çekilir ve otomatik olarak işlenir; doğruluğu ve güncelliği garanti edilmez. İstatistikler geçmiş maçlara
+            dayanır ve yalnızca bilgilendirme amaçlıdır.
+          </p>
+          <p>
+            Bu sitedeki hiçbir içerik bahis ya da şans oyunu tavsiyesi değildir ve bahse teşvik amacı taşımaz; sitede bahis bağlantısı,
+            reklamı veya oran bilgisi yer almaz. Skor tahminleri istatistiksel model çıktısıdır.
+          </p>
+          <p>
+            Takım logoları, oyuncu fotoğrafları, kulüp, lig ve turnuva adları sahiplerine aittir. Gokostats hiçbir kulüp, lig, federasyon
+            veya veri sağlayıcıyla bağlantılı değildir.
+          </p>
+        </div>
       </div>
     </footer>
   );

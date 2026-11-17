@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { inferStarter } from "./starter";
 
-describe("İlk 11 tespiti (Spike B9)", () => {
+describe("İlk 11 tespiti", () => {
   it("Kadro biliniyorsa kadroya bakılır, dakikaya bakılmaz", () => {
     expect(inferStarter({ lineupKnown: true, listedAsStarter: true, minutesPlayed: 45 })).toBe(true);
     expect(inferStarter({ lineupKnown: true, listedAsStarter: false, minutesPlayed: 70 })).toBe(false);

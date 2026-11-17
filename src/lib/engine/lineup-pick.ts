@@ -58,6 +58,34 @@ export function pickEleven<T>(candidates: Candidate<T>[], benchSize: number): { 
   };
 }
 
+// Hazır bir ilk 11'den (BSD tahmini) oynayamayacakları çıkarır; her birinin yerine aynı hattan, yoksa (kaleci hariç)
+// herhangi bir hattan en düzenli uygun adayı koyar. Çıkan sayısı maxReplace'i aşarsa ya da yer doldurulamazsa null:
+// bu durumda tahmin güvenilmez sayılır ve başka kaynağa geçilir.
+export function repairEleven<T extends { id: number; position: string | null }>(
+  starters: T[],
+  ok: (p: T) => boolean,
+  pool: Candidate<T>[],
+  maxReplace: number,
+): { starters: T[]; replaced: { out: T; in: T }[] } | null {
+  const removed = starters.filter((p) => !ok(p));
+  if (removed.length > maxReplace) return null;
+  const used = new Set(starters.filter(ok).map((p) => p.id));
+  const sorted = pool.filter((c) => ok(c.player)).sort((a, b) => lineupScore(b) - lineupScore(a));
+  const result = [...starters];
+  const replaced: { out: T; in: T }[] = [];
+  for (const out of removed) {
+    const free = (c: Candidate<T>) => !used.has(c.player.id);
+    const pick =
+      sorted.find((c) => free(c) && c.position === out.position) ??
+      (out.position !== "G" ? sorted.find((c) => free(c) && c.position !== "G") : undefined);
+    if (!pick) return null;
+    used.add(pick.player.id);
+    result[result.indexOf(out)] = pick.player;
+    replaced.push({ out, in: pick.player });
+  }
+  return { starters: result, replaced };
+}
+
 // ---------- Sahaya diziliş ----------
 
 // Hat içinde soldan sağa sıra (sahaya ev sahibi kalesinden bakarken)

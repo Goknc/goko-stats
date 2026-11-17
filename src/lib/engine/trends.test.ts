@@ -8,7 +8,7 @@ const score = (h: number | null, a: number | null, hHt: number | null, aHt: numb
   homeScore: h, awayScore: a, homeScoreHt: hHt, awayScoreHt: aHt,
 });
 
-// Spike referans maçları
+// Referans maçlar (elle doğrulanmış gerçek maçlar)
 const celtaRacing = score(5, 0, 2, 0); // 213582
 const getafeCelta = score(1, 1, 1, 0); // 213554
 

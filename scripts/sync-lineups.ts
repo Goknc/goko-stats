@@ -4,9 +4,11 @@
 // sonradan düzeltebiliyor (Trabzonspor – Beşiktaş, 19 Ekim: 3 oyuncu kesin kadroda olduğu hâlde oynamadı).
 // Kullanım:
 //   npx tsx scripts/sync-lineups.ts --hours 48   (günlük: tahmini kadrolar)
-//   npx tsx scripts/sync-lineups.ts --hours 2    (30 dakikada bir: kesinleşen kadrolar)
+//   npx tsx scripts/sync-lineups.ts --hours 2    (saatte bir: kesinleşen kadrolar)
+// Kadroyla birlikte BSD'nin maç öncesi sakat / cezalı listesi (unavailable_players) de saklanır.
 import { prisma } from "../src/lib/prisma";
 import { bsd } from "../src/lib/bsd/client";
+import type { BsdLineups } from "../src/lib/bsd/types";
 import { runJob } from "./lib/run-job";
 
 function arg(name: string): string | undefined {
@@ -15,6 +17,22 @@ function arg(name: string): string | undefined {
 }
 
 const hours = Number(arg("hours") ?? 2);
+
+// Sakat / cezalı listesi her çalıştırmada baştan yazılır (iyileşen oyuncu listeden düşer)
+async function saveUnavailable(matchId: number, lu: BsdLineups) {
+  const sides = lu.unavailable_players;
+  const teamOf = { home: lu.lineups?.home.team_id, away: lu.lineups?.away.team_id };
+  const rows = (["home", "away"] as const).flatMap((side) =>
+    (sides?.[side] ?? [])
+      .filter((p) => p.id != null && teamOf[side] != null)
+      .map((p) => ({ matchId, teamId: teamOf[side]!, playerId: p.id!, name: p.name, status: p.status ?? null, reason: p.reason ?? null })),
+  );
+  if (!rows.length && !sides) return; // BSD liste vermediyse eldekini silme
+  await prisma.$transaction([
+    prisma.matchUnavailable.deleteMany({ where: { matchId } }),
+    prisma.matchUnavailable.createMany({ data: rows, skipDuplicates: true }),
+  ]);
+}
 
 runJob("lineups", async () => {
   const now = new Date();
@@ -33,12 +51,13 @@ runJob("lineups", async () => {
   const counts = { confirmed: 0, predicted: 0, none: 0, changed: 0 };
   for (const m of matches) {
     const lu = await bsd.eventLineups(m.id);
+    await saveUnavailable(m.id, lu);
     if (!lu.lineups || lu.lineup_status === "unavailable") {
       counts.none++;
       continue;
     }
 
-    // B8: id'siz oyuncular atlanır
+    // id'siz oyuncular atlanır
     const entries = (["home", "away"] as const)
       .flatMap((side) => {
         const t = lu.lineups![side];
@@ -80,6 +99,7 @@ runJob("lineups", async () => {
           playerId: e.player.id!,
           isStarter: e.isStarter,
           lineupStatus: status,
+          jerseyNumber: e.player.jersey_number ?? null,
         })),
       });
     });

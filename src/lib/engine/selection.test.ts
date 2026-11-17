@@ -34,7 +34,7 @@ describe("Takım maç seçimi", () => {
     expect(sample.items[0].homeTeamId).toBe(CELTA);
   });
 
-  it("Sıralama tarihe göre, yeniden eskiye (Spike B2)", () => {
+  it("Sıralama tarihe göre, yeniden eskiye", () => {
     const a = match("2026-08-01", CELTA, RAKIP_A);
     const b = match("2026-09-20", CELTA, RAKIP_B);
     const c = match("2026-09-01", CELTA, RAKIP_A);
@@ -42,7 +42,7 @@ describe("Takım maç seçimi", () => {
     expect(ids).toEqual([b.id, c.id, a.id]);
   });
 
-  it("Yalnızca bitmiş maçlar sayılır (Spike B3, B7)", () => {
+  it("Yalnızca bitmiş maçlar sayılır", () => {
     const history = ["finished", "postponed", "canceled", "cancelled", "unresolved", "notstarted"].map((status) =>
       match("2026-09-01", CELTA, RAKIP_A, { status }),
     );

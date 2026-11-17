@@ -1,13 +1,15 @@
 // src/lib/lineup.ts
 // Maçın sahaya dizilecek kadrosu: ilk 11 + yedekler ve hangi kaynağa dayandığı.
-// Sıra: 1) BSD'nin kadrosu (kesin ya da tahmini)  2) bitmiş maçta oynayanlar
-//       3) takımın bir önceki maçının ilk 11'i (hepsi hâlâ takımda ve oynayabilir durumdaysa)
-//       4) kendi tahminimiz: takımın son maçlarında en çok ilk 11 başlayanlar  5) kadro listesi (profil verisi).
-// Takım liderleri ("krallar"): son 12 ayda takım formasıyla en çok gol atan, asist yapan, şut çeken... oyuncular.
+// Sıra: 1) kesin kadro  2) BSD'nin tahmini kadrosu (oynayamayacaklar ayıklanıp yerleri doldurularak)
+//       3) bitmiş maçta oynayanlar  4) takımın bir önceki maçının ilk 11'i (hepsi oynayabilir durumdaysa)
+//       5) kendi tahminimiz: takımın son maçlarında en çok ilk 11 başlayanlar  6) kadro listesi (profil verisi).
+// Oynayamaz sayılanlar: sakat / cezalı (BSD maç öncesi listesi ya da profil), takımdan ayrılanlar ve milli takımda
+// o arada kadroya çağrılmayanlar (aynı milli maç arasındaki önceki maçların kadrosunda olmayanlar).
 import { prisma } from "./prisma";
 import { inferStarter } from "./engine/starter";
 import { availabilityLabel, injuryName } from "./engine/player-bio";
-import { lineupScore, pickEleven, type Candidate } from "./engine/lineup-pick";
+import { lineupScore, pickEleven, repairEleven, type Candidate } from "./engine/lineup-pick";
+import { isNationalTeamLeague } from "./engine/leagues";
 import { TZ } from "./dates";
 
 export type LineupSource = "CONFIRMED" | "PREDICTED" | "PREVIOUS" | "ESTIMATED" | "SQUAD" | "NONE";
@@ -21,17 +23,27 @@ export interface LineupPlayer {
   injury: string | null; // "Sakat · Diz sakatlığı"
 }
 
+export interface MissingPlayer {
+  id: number;
+  name: string;
+  reason: string; // "Sakat · Hamstring Injury", "Cezalı"
+}
+
 export interface TeamLineup {
   source: LineupSource;
   starters: LineupPlayer[];
   bench: LineupPlayer[];
   basedOn: number; // tahminin dayandığı maç sayısı (yalnızca ESTIMATED)
   previousMatch?: string; // "Fransa – Türkiye (12 Kasım)" (yalnızca PREVIOUS)
+  replaced: { out: string; in: string; reason: string }[]; // BSD tahmininden çıkarılıp yerine konanlar
+  missing: MissingPlayer[]; // maç öncesi sakat / cezalı listesi
 }
 
-const EMPTY: TeamLineup = { source: "NONE", starters: [], bench: [], basedOn: 0 };
 const ESTIMATE_MATCHES = 6;
 const BENCH_SIZE = 9;
+const MAX_REPLACE = 4; // BSD tahmininde bundan fazla oyuncu oynayamıyorsa tahmin bırakılır
+const CALL_UP_DAYS = 12; // milli maç arası: bu süre içindeki maç kadroları "kadroya çağrılanlar" sayılır
+const MIN_CALL_UP = 15; // daha az oyuncu varsa kadro bilinmiyor sayılır
 
 const PLAYER_SELECT = {
   id: true, name: true, position: true, specificPosition: true, jerseyNumber: true, availability: true, injuryType: true,
@@ -44,52 +56,87 @@ type PlayerRow = {
   marketValueEur: bigint | null;
 };
 
-const toPlayer = (p: PlayerRow): LineupPlayer => ({
-  id: p.id,
-  name: p.name,
-  position: p.position,
-  specificPosition: p.specificPosition,
-  jerseyNumber: p.jerseyNumber,
-  injury: availabilityLabel(p.availability) ? [availabilityLabel(p.availability), injuryName(p.injuryType)].filter(Boolean).join(" · ") : null,
-});
-
-// Oynaması beklenmeyenler: sakat, cezalı ("şüpheli" oynayabilir)
-const isOut = (p: PlayerRow) => p.availability === "injured" || p.availability === "suspended" || p.availability === "unavailable";
+const STATUS_TR: Record<string, string> = { injured: "Sakat", suspended: "Cezalı", doubtful: "Şüpheli", unavailable: "Oynamayacak" };
+const named = (p: { name: string }) => !/^Oyuncu #\d+$/.test(p.name);
+// Profilde oynaması beklenmeyenler: sakat, cezalı ("şüpheli" oynayabilir)
+const profileOut = (p: PlayerRow) => p.availability === "injured" || p.availability === "suspended" || p.availability === "unavailable";
 // Takımdan ayrılmış oyuncu (profilinde başka kulüp yazıyor ve bu takım milli takımı da değil)
 const hasLeft = (p: PlayerRow, teamId: number) => p.currentTeamId !== null && p.currentTeamId !== teamId && p.nationalTeamId !== teamId;
-const named = (p: { name: string }) => !/^Oyuncu #\d+$/.test(p.name);
 
-export async function loadTeamLineup(matchId: number, teamId: number, before: Date): Promise<TeamLineup> {
-  // 1) Maçın kendi kadrosu
-  const listed = await prisma.matchLineup.findMany({
-    where: { matchId, teamId },
-    select: { isStarter: true, lineupStatus: true, player: { select: PLAYER_SELECT } },
-  });
-  if (listed.some((l) => l.isStarter)) {
-    return {
-      source: listed[0].lineupStatus,
-      starters: listed.filter((l) => l.isStarter).map((l) => toPlayer(l.player)),
-      bench: listed.filter((l) => !l.isStarter).map((l) => toPlayer(l.player)),
-      basedOn: 0,
-    };
-  }
+interface Context {
+  teamId: number;
+  national: boolean;
+  callUps: Set<number> | null; // milli takımda bu aradaki maç kadroları (yoksa null: kural uygulanmaz)
+  missing: Map<number, MissingPlayer>; // BSD'nin maç öncesi sakat / cezalı listesi
+  jerseys: Map<number, number>; // takımın kesin kadrolarındaki son forma numarası
+}
 
-  // 2) Bitmiş maç, kadro kaydı yok: 60+ dakika oynayanlar ilk 11 sayılır
-  const played = await prisma.playerMatchStat.findMany({
-    where: { matchId, teamId },
-    select: { minutesPlayed: true, player: { select: PLAYER_SELECT } },
-  });
-  const playedStarters = played.filter((p) => inferStarter({ lineupKnown: false, listedAsStarter: false, minutesPlayed: p.minutesPlayed }));
-  if (playedStarters.length) {
-    return {
-      source: "CONFIRMED",
-      starters: playedStarters.map((p) => toPlayer(p.player)),
-      bench: played.filter((p) => !playedStarters.includes(p) && p.minutesPlayed > 0).map((p) => toPlayer(p.player)),
-      basedOn: 0,
-    };
-  }
+// Oyuncu bu maçta oynayabilir mi; oynayamıyorsa nedeni
+function whyOut(p: PlayerRow, ctx: Context): string | null {
+  const listed = ctx.missing.get(p.id);
+  if (listed) return listed.reason;
+  if (profileOut(p)) return [availabilityLabel(p.availability), injuryName(p.injuryType)].filter(Boolean).join(" · ") || "Oynamayacak";
+  if (!ctx.national && hasLeft(p, ctx.teamId)) return "Takımdan ayrıldı";
+  if (ctx.callUps && !ctx.callUps.has(p.id)) return "Kadroya çağrılmadı";
+  return null;
+}
+const eligible = (p: PlayerRow, ctx: Context) => named(p) && whyOut(p, ctx) === null;
 
-  // Takımın oyuncu verisi olan son maçları (3 ve 4 için)
+function toPlayer(p: PlayerRow, ctx: Context, matchJersey?: number | null): LineupPlayer {
+  // Forma numarası: takımın kesin kadrolarındaki son numara; yoksa (kulüpte) maç kadrosundaki ya da profildeki numara.
+  // Milli takımda tahmini kadro ve profil kulüp numarasını verdiği için yalnızca kesin kadrolara bakılır.
+  const clubNumber = ctx.national
+    ? null
+    : (matchJersey ?? (p.currentTeamId === ctx.teamId || p.currentTeamId === null ? p.jerseyNumber : null));
+  const label = availabilityLabel(p.availability);
+  return {
+    id: p.id,
+    name: p.name,
+    position: p.position,
+    specificPosition: p.specificPosition,
+    jerseyNumber: ctx.jerseys.get(p.id) ?? clubNumber ?? null,
+    injury: label ? [label, injuryName(p.injuryType)].filter(Boolean).join(" · ") : null,
+  };
+}
+
+async function loadContext(matchId: number, teamId: number, before: Date, leagueId: number): Promise<Context> {
+  const national = isNationalTeamLeague(leagueId);
+  const [unavailable, confirmed, callUpRows] = await Promise.all([
+    prisma.matchUnavailable.findMany({ where: { matchId, teamId }, select: { playerId: true, name: true, status: true, reason: true } }),
+    // Son kesin kadrolardaki forma numaraları (en yeni maç önce, ilk görülen kazanır)
+    prisma.matchLineup.findMany({
+      where: { teamId, lineupStatus: "CONFIRMED", jerseyNumber: { not: null }, match: { eventDate: { lte: before } } },
+      orderBy: { match: { eventDate: "desc" } },
+      take: 300,
+      select: { playerId: true, jerseyNumber: true },
+    }),
+    national
+      ? prisma.matchLineup.findMany({
+          where: {
+            teamId,
+            matchId: { not: matchId },
+            match: { eventDate: { gte: new Date(before.getTime() - CALL_UP_DAYS * 24 * 60 * 60 * 1000), lt: before } },
+          },
+          select: { playerId: true },
+        })
+      : Promise.resolve([]),
+  ]);
+  const jerseys = new Map<number, number>();
+  for (const r of confirmed) if (!jerseys.has(r.playerId)) jerseys.set(r.playerId, r.jerseyNumber!);
+  const callUps = new Set(callUpRows.map((r) => r.playerId));
+  const reasonOf = (status: string | null, reason: string | null) =>
+    [STATUS_TR[status ?? ""] ?? "Oynamayacak", reason && !/suspension/i.test(reason) ? reason : null].filter(Boolean).join(" · ");
+  return {
+    teamId,
+    national,
+    callUps: callUps.size >= MIN_CALL_UP ? callUps : null,
+    missing: new Map(unavailable.map((u) => [u.playerId, { id: u.playerId, name: u.name, reason: reasonOf(u.status, u.reason) }])),
+    jerseys,
+  };
+}
+
+// Takımın oyuncu verisi olan son maçlarından ilk 11 adayları (yalnızca oynayabilecek olanlar)
+async function recentCandidates(teamId: number, before: Date, ctx: Context) {
   const recent = await prisma.match.findMany({
     where: {
       OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }],
@@ -101,134 +148,139 @@ export async function loadTeamLineup(matchId: number, teamId: number, before: Da
     take: ESTIMATE_MATCHES,
     select: { id: true, eventDate: true, homeTeam: { select: { name: true } }, awayTeam: { select: { name: true } } },
   });
-  if (recent.length) {
-    const ids = recent.map((m) => m.id);
-    const [stats, lineups] = await Promise.all([
-      prisma.playerMatchStat.findMany({
-        where: { matchId: { in: ids }, teamId },
-        select: { matchId: true, playerId: true, minutesPlayed: true, player: { select: PLAYER_SELECT } },
-      }),
-      prisma.matchLineup.findMany({ where: { matchId: { in: ids }, teamId }, select: { matchId: true, playerId: true, isStarter: true } }),
-    ]);
-    const lineupKnown = new Set(lineups.map((l) => l.matchId));
-    const listedStarter = new Set(lineups.filter((l) => l.isStarter).map((l) => `${l.matchId}-${l.playerId}`));
-    const order = new Map(ids.map((id, i) => [id, i])); // 0 = en yeni maç
+  const ids = recent.map((m) => m.id);
+  const [stats, lineups] = await Promise.all([
+    prisma.playerMatchStat.findMany({
+      where: { matchId: { in: ids }, teamId },
+      select: { matchId: true, playerId: true, minutesPlayed: true, player: { select: PLAYER_SELECT } },
+    }),
+    prisma.matchLineup.findMany({ where: { matchId: { in: ids }, teamId }, select: { matchId: true, playerId: true, isStarter: true } }),
+  ]);
+  const lineupKnown = new Set(lineups.map((l) => l.matchId));
+  const listedStarter = new Set(lineups.filter((l) => l.isStarter).map((l) => `${l.matchId}-${l.playerId}`));
+  const started = (s: (typeof stats)[number]) =>
+    inferStarter({ lineupKnown: lineupKnown.has(s.matchId), listedAsStarter: listedStarter.has(`${s.matchId}-${s.playerId}`), minutesPlayed: s.minutesPlayed });
+  const order = new Map(ids.map((id, i) => [id, i])); // 0 = en yeni maç
 
-    const byPlayer = new Map<number, Candidate<PlayerRow>>();
-    for (const s of stats) {
-      if (!named(s.player) || hasLeft(s.player, teamId) || isOut(s.player)) continue;
-      const started = inferStarter({
-        lineupKnown: lineupKnown.has(s.matchId),
-        listedAsStarter: listedStarter.has(`${s.matchId}-${s.playerId}`),
-        minutesPlayed: s.minutesPlayed,
-      });
-      const c = byPlayer.get(s.playerId) ?? { player: s.player, position: s.player.position, starts: [], subs: [] };
-      (started ? c.starts : c.subs).push(order.get(s.matchId)!);
-      byPlayer.set(s.playerId, c);
+  const byPlayer = new Map<number, Candidate<PlayerRow>>();
+  for (const s of stats) {
+    if (!eligible(s.player, ctx)) continue;
+    const c = byPlayer.get(s.playerId) ?? { player: s.player, position: s.player.position, starts: [], subs: [] };
+    (started(s) ? c.starts : c.subs).push(order.get(s.matchId)!);
+    byPlayer.set(s.playerId, c);
+  }
+  const lastEleven = stats.filter((s) => s.matchId === ids[0] && started(s));
+  return { recent, byPlayer, lastEleven };
+}
+
+const benchFrom = (pool: Candidate<PlayerRow>[], used: Set<number>) =>
+  pool
+    .filter((c) => !used.has(c.player.id))
+    .sort((a, b) => lineupScore(b) - lineupScore(a))
+    .slice(0, BENCH_SIZE)
+    .map((c) => c.player);
+
+export async function loadTeamLineup(matchId: number, teamId: number, before: Date, leagueId: number): Promise<TeamLineup> {
+  const ctx = await loadContext(matchId, teamId, before, leagueId);
+  const base = { basedOn: 0, replaced: [], missing: [...ctx.missing.values()] };
+  const out = (p: PlayerRow, jersey?: number | null) => toPlayer(p, ctx, jersey);
+
+  // 1) Maçın kendi kadrosu: kesinse aynen
+  const listed = await prisma.matchLineup.findMany({
+    where: { matchId, teamId },
+    select: { isStarter: true, lineupStatus: true, jerseyNumber: true, player: { select: PLAYER_SELECT } },
+  });
+  const listedStarters = listed.filter((l) => l.isStarter);
+  const jerseyOf = new Map(listed.map((l) => [l.player.id, l.jerseyNumber]));
+  if (listedStarters.length && listed[0].lineupStatus === "CONFIRMED") {
+    return {
+      ...base,
+      source: "CONFIRMED",
+      starters: listedStarters.map((l) => out(l.player, l.jerseyNumber)),
+      bench: listed.filter((l) => !l.isStarter).map((l) => out(l.player, l.jerseyNumber)),
+    };
+  }
+
+  // 3) Bitmiş maç, kadro kaydı yok: 60+ dakika oynayanlar ilk 11 sayılır
+  if (!listedStarters.length) {
+    const played = await prisma.playerMatchStat.findMany({
+      where: { matchId, teamId },
+      select: { minutesPlayed: true, player: { select: PLAYER_SELECT } },
+    });
+    const playedStarters = played.filter((p) => inferStarter({ lineupKnown: false, listedAsStarter: false, minutesPlayed: p.minutesPlayed }));
+    if (playedStarters.length) {
+      return {
+        ...base,
+        source: "CONFIRMED",
+        starters: playedStarters.map((p) => out(p.player)),
+        bench: played.filter((p) => !playedStarters.includes(p) && p.minutesPlayed > 0).map((p) => out(p.player)),
+      };
     }
-    // 3) Bir önceki maçın ilk 11'i: tam 11 kişi, bir kaleci var ve hiçbiri sakat/cezalı/ayrılmış değilse aynen kullanılır
-    const lastStats = stats.filter((s) => s.matchId === ids[0]);
-    const isLastStarter = (s: (typeof stats)[number]) =>
-      inferStarter({ lineupKnown: lineupKnown.has(s.matchId), listedAsStarter: listedStarter.has(`${s.matchId}-${s.playerId}`), minutesPlayed: s.minutesPlayed });
-    const lastEleven = lastStats.filter(isLastStarter);
-    if (
-      lastEleven.length === 11 &&
-      lastEleven.some((s) => s.player.position === "G") &&
-      lastEleven.every((s) => byPlayer.has(s.playerId)) // byPlayer'da olmayan: adsız, ayrılmış ya da oynayamaz
-    ) {
+  }
+
+  const { recent, byPlayer, lastEleven } = await recentCandidates(teamId, before, ctx);
+
+  // 2) BSD'nin tahmini kadrosu: oynayamayacaklar çıkarılır, yerlerine aynı hattan en düzenli oyuncu girer
+  if (listedStarters.length) {
+    const benchPool: Candidate<PlayerRow>[] = listed
+      .filter((l) => !l.isStarter && !byPlayer.has(l.player.id))
+      .map((l, i) => ({ player: l.player, position: l.player.position, starts: [], subs: [], rank: 50 + i }));
+    const pool = [...byPlayer.values(), ...benchPool];
+    const repaired = repairEleven(listedStarters.map((l) => l.player), (p) => eligible(p, ctx), pool, MAX_REPLACE);
+    if (repaired) {
+      const used = new Set(repaired.starters.map((p) => p.id));
+      const bsdBench = listed.filter((l) => !l.isStarter && !used.has(l.player.id) && eligible(l.player, ctx)).map((l) => l.player);
+      return {
+        ...base,
+        source: "PREDICTED",
+        starters: repaired.starters.map((p) => out(p, jerseyOf.get(p.id))),
+        bench: (bsdBench.length ? bsdBench : benchFrom(pool, used)).map((p) => out(p, jerseyOf.get(p.id))),
+        replaced: repaired.replaced.map((r) => ({ out: r.out.name, in: r.in.name, reason: whyOut(r.out, ctx) ?? "" })),
+      };
+    }
+  }
+
+  if (recent.length) {
+    // 4) Bir önceki maçın ilk 11'i: tam 11 kişi, bir kaleci var ve hepsi oynayabilir durumdaysa aynen kullanılır
+    if (lastEleven.length === 11 && lastEleven.some((s) => s.player.position === "G") && lastEleven.every((s) => byPlayer.has(s.playerId))) {
       const inEleven = new Set(lastEleven.map((s) => s.playerId));
       const last = recent[0];
       return {
+        ...base,
         source: "PREVIOUS",
-        starters: lastEleven.map((s) => toPlayer(s.player)),
-        bench: [...byPlayer.values()]
-          .filter((c) => !inEleven.has(c.player.id))
-          .sort((a, b) => lineupScore(b) - lineupScore(a))
-          .slice(0, BENCH_SIZE)
-          .map((c) => toPlayer(c.player)),
+        starters: lastEleven.map((s) => out(s.player)),
+        bench: benchFrom([...byPlayer.values()], inEleven).map((p) => out(p)),
         basedOn: 1,
         previousMatch: `${last.homeTeam.name} – ${last.awayTeam.name} (${last.eventDate.toLocaleDateString("tr-TR", { timeZone: TZ, day: "numeric", month: "long" })})`,
       };
     }
 
-    // 4) Tahmin: son maçlarda en düzenli ilk 11 başlayanlar
+    // 5) Tahmin: son maçlarda en düzenli ilk 11 başlayanlar
     const picked = pickEleven([...byPlayer.values()], BENCH_SIZE);
     if (picked) {
-      return { source: "ESTIMATED", starters: picked.starters.map(toPlayer), bench: picked.bench.map(toPlayer), basedOn: recent.length };
+      return {
+        ...base,
+        source: "ESTIMATED",
+        starters: picked.starters.map((p) => out(p)),
+        bench: picked.bench.map((p) => out(p)),
+        basedOn: recent.length,
+      };
     }
   }
 
-  // 5) Kadro listesi: profilinde bu takım (kulübü ya da milli takımı) yazan oyuncular, piyasa değerine göre
+  // 6) Kadro listesi: profilinde bu takım (kulübü ya da milli takımı) yazan oyuncular, piyasa değerine göre
   const squad = await prisma.player.findMany({
     where: { OR: [{ currentTeamId: teamId }, { nationalTeamId: teamId }] },
     select: PLAYER_SELECT,
     orderBy: { marketValueEur: { sort: "desc", nulls: "last" } },
     take: 60,
   });
-  const fit = squad.filter((p) => named(p) && !isOut(p));
   const picked = pickEleven(
     // Sıra piyasa değeri: ilk sıradaki en "yeni maçta başlamış" gibi puanlanır
-    fit.map((p, i) => ({ player: p, position: p.position, starts: [], subs: [], rank: i })),
+    squad.filter((p) => eligible(p, ctx)).map((p, i) => ({ player: p, position: p.position, starts: [], subs: [], rank: i })),
     BENCH_SIZE,
   );
-  if (picked) return { source: "SQUAD", starters: picked.starters.map(toPlayer), bench: picked.bench.map(toPlayer), basedOn: 0 };
+  if (picked) return { ...base, source: "SQUAD", starters: picked.starters.map((p) => out(p)), bench: picked.bench.map((p) => out(p)) };
 
-  return EMPTY;
-}
-
-// ---------- Takım liderleri ----------
-
-export const LEADER_STATS = [
-  { key: "goals", label: "Gol kralı", unit: "gol" },
-  { key: "assists", label: "Asist kralı", unit: "asist" },
-  { key: "shotsTotal", label: "Şut kralı", unit: "şut" },
-  { key: "shotsOnTarget", label: "İsabetli şut kralı", unit: "isabetli şut" },
-  { key: "keyPasses", label: "Kilit pas kralı", unit: "kilit pas" },
-  { key: "passesAccurate", label: "Pas kralı", unit: "isabetli pas" },
-  { key: "dribblesWon", label: "Çalım kralı", unit: "başarılı çalım" },
-  { key: "tackles", label: "Top kapma kralı", unit: "top kapma" },
-  { key: "interceptions", label: "Pas arası kralı", unit: "pas arası" },
-  { key: "aerialsWon", label: "Hava topu kralı", unit: "hava topu" },
-  { key: "saves", label: "Kurtarış kralı", unit: "kurtarış" },
-  { key: "rating", label: "En yüksek puan ortalaması", unit: "puan" },
-] as const;
-export type LeaderKey = (typeof LEADER_STATS)[number]["key"];
-
-export interface LeaderBadge {
-  key: LeaderKey;
-  label: string;
-  value: string; // "12 gol"
-}
-
-const LEADER_WINDOW_DAYS = 365;
-const RATING_MIN_MATCHES = 3;
-
-// Verilen oyuncular arasında her istatistiğin lideri: oyuncu id → rozetleri
-export async function loadTeamLeaders(teamId: number, playerIds: number[], before: Date): Promise<Record<number, LeaderBadge[]>> {
-  if (!playerIds.length) return {};
-  const from = new Date(before.getTime() - LEADER_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const rows = await prisma.playerMatchStat.groupBy({
-    by: ["playerId"],
-    where: { teamId, playerId: { in: playerIds }, minutesPlayed: { gt: 0 }, match: { status: "finished", eventDate: { gte: from, lt: before } } },
-    _sum: {
-      goals: true, assists: true, shotsTotal: true, shotsOnTarget: true, keyPasses: true, passesAccurate: true, dribblesWon: true,
-      tackles: true, interceptions: true, aerialsWon: true, saves: true,
-    },
-    _avg: { rating: true },
-    _count: { rating: true },
-  });
-
-  const out: Record<number, LeaderBadge[]> = {};
-  for (const stat of LEADER_STATS) {
-    let best: { playerId: number; value: number } | null = null;
-    for (const r of rows) {
-      const value =
-        stat.key === "rating" ? (r._count.rating >= RATING_MIN_MATCHES ? (r._avg.rating ?? 0) : 0) : (r._sum[stat.key] ?? 0);
-      if (value > 0 && (!best || value > best.value)) best = { playerId: r.playerId, value };
-    }
-    if (!best) continue;
-    const text = stat.key === "rating" ? best.value.toFixed(2).replace(".", ",") : String(best.value);
-    (out[best.playerId] ??= []).push({ key: stat.key, label: stat.label, value: `${text} ${stat.unit}` });
-  }
-  return out;
+  return { ...base, source: "NONE", starters: [], bench: [] };
 }

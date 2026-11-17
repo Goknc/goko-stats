@@ -143,6 +143,7 @@ model Match {
   teamStats   TeamMatchStat[]
   lineups     MatchLineup[]
   playerStats PlayerMatchStat[]
+  unavailable MatchUnavailable[]
 
   @@index([eventDate])
   @@index([homeTeamId, eventDate])
@@ -181,6 +182,7 @@ model MatchLineup {
   playerId     Int
   isStarter    Boolean
   lineupStatus LineupStatus
+  jerseyNumber Int? // o maçtaki forma numarası (BSD kadrosu)
   updatedAt    DateTime     @updatedAt
 
   match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
@@ -190,6 +192,22 @@ model MatchLineup {
   @@unique([matchId, playerId])
   @@index([playerId])
   @@map("match_lineups")
+}
+
+// Maç öncesi oynayamayacak oyuncular (BSD kadro yanıtındaki unavailable_players): sakat, cezalı...
+model MatchUnavailable {
+  id       Int     @id @default(autoincrement())
+  matchId  Int
+  teamId   Int
+  playerId Int
+  name     String
+  status   String? // injured, suspended...
+  reason   String?
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@map("match_unavailable")
 }
 
 model PlayerMatchStat {

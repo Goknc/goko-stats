@@ -78,7 +78,7 @@ async function bsdFetch<T>(pathOrUrl: string, params?: Params): Promise<T> {
   throw new Error(`BSD isteği ${MAX_ATTEMPTS} denemede başarısız (${lastError}): ${url.pathname}`);
 }
 
-// Tüm sayfaları gezer. Bitişi `next === null` ile anlar, `count` ile değil (Spike B1).
+// Tüm sayfaları gezer. Bitişi `next === null` ile anlar, `count` ile değil (count güvenilmez).
 async function fetchAllPages<T>(path: string, params?: Params): Promise<T[]> {
   const results: T[] = [];
   let page = await bsdFetch<BsdPage<T>>(path, { ...params, limit: 200 });

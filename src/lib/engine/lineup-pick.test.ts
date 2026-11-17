@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lineupScore, pickEleven, pitchRows, type Candidate } from "./lineup-pick";
+import { lineupScore, pickEleven, pitchRows, repairEleven, type Candidate } from "./lineup-pick";
 
 const c = (id: number, position: string, starts: number[], subs: number[] = []): Candidate<number> => ({ player: id, position, starts, subs });
 
@@ -54,5 +54,31 @@ describe("Sahaya diziliş", () => {
     expect(rows.attack.length).toBeLessThanOrEqual(4);
     expect(rows.midfield.length).toBeGreaterThan(0);
     expect(pitchRows([p(1, null)]).midfield).toHaveLength(1);
+  });
+});
+
+describe("Tahmini ilk 11'i onarma", () => {
+  const p = (id: number, position: string) => ({ id, position });
+  const eleven = [p(1, "G"), p(3, "D"), p(4, "D"), p(5, "D"), p(6, "D"), p(9, "M"), p(10, "M"), p(11, "M"), p(15, "F"), p(16, "F"), p(99, "F")];
+  const pool: Candidate<{ id: number; position: string }>[] = [
+    { player: p(18, "F"), position: "F", starts: [0, 1], subs: [] },
+    { player: p(19, "F"), position: "F", starts: [], subs: [0] },
+    { player: p(12, "M"), position: "M", starts: [0], subs: [] },
+  ];
+
+  it("Kadroda olmayan oyuncunun yerine aynı hattan en düzenli aday girer", () => {
+    const r = repairEleven(eleven, (x) => x.id !== 99, pool, 3)!;
+    expect(r.starters.map((x) => x.id)).toContain(18);
+    expect(r.starters.map((x) => x.id)).not.toContain(99);
+    expect(r.replaced).toEqual([{ out: p(99, "F"), in: p(18, "F") }]);
+  });
+
+  it("Herkes uygunsa kadro aynen kalır", () => {
+    expect(repairEleven(eleven, () => true, pool, 3)).toEqual({ starters: eleven, replaced: [] });
+  });
+
+  it("Çok oyuncu çıkıyorsa ya da yer doldurulamıyorsa tahmin bırakılır", () => {
+    expect(repairEleven(eleven, (x) => x.id > 10, pool, 3)).toBeNull();
+    expect(repairEleven(eleven, (x) => x.id !== 1, pool, 3)).toBeNull(); // yedek kaleci yok
   });
 });

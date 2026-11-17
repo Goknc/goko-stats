@@ -64,3 +64,5 @@ player-dump.json
 skills-lock.json
 # script reports (scripts/train-score-model.ts)
 /reports/
+# yerel deneme scriptleri
+/scripts/tmp/

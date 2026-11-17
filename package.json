@@ -14,6 +14,7 @@
     "sync:lineups": "tsx scripts/sync-lineups.ts --hours 3",
     "sync:player-extras": "tsx scripts/sync-player-extras.ts",
     "sync:players": "tsx scripts/sync-player-profiles.ts --career 800",
+    "sync:careers": "tsx scripts/sync-player-profiles.ts --skip-profiles --career 1200",
     "test:e2e": "next build && playwright test",
     "test:e2e:dev": "playwright test"
   },

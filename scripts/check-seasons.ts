@@ -9,7 +9,7 @@ const LEAGUES: [number, string][] = [
   [11, "Süper Lig"],
   [3, "La Liga"],
   [7, "Champions League"],
-  [94, "2. Bundesliga"], // B10: yalnızca 26/27 bekleniyor
+  [94, "2. Bundesliga"], // yalnızca 26/27 sezonu bekleniyor
 ];
 
 async function main() {

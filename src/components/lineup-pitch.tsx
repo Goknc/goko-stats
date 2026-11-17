@@ -1,32 +1,13 @@
-// Maç detayı: iki takımın ilk 11'i sahada mevki mevki, altında yedekler.
-// Oyuncunun yanındaki semboller takım liderliklerini gösterir (son 12 ayda takımın gol kralı, asist kralı...).
+// Maç detayı: iki takımın ilk 11'i sahada mevki mevki, altında yedekler ve maç öncesi eksikler.
+// Başlıktaki etiket kadronun kaynağını söyler: kesin ilk 11, tahmini ilk 11 ya da son maçın ilk 11'i.
 import Link from "next/link";
-import {
-  ChevronsUp, Crosshair, Grab, Hand, Handshake, KeyRound, Send, Shield, Star, Target, Volleyball, Zap, type LucideIcon,
-} from "lucide-react";
-import type { LeaderBadge, LeaderKey, LineupPlayer, LineupSource, TeamLineup } from "@/lib/lineup";
-import { LEADER_STATS } from "@/lib/lineup";
+import type { LineupPlayer, LineupSource, TeamLineup } from "@/lib/lineup";
 import { pitchRows } from "@/lib/engine/lineup-pick";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerPhoto, TeamLogo } from "@/components/entity-image";
 import { cn } from "@/lib/utils";
 
-const LEADER_ICONS: Record<LeaderKey, { icon: LucideIcon; bg: string }> = {
-  goals: { icon: Volleyball, bg: "bg-[var(--yellow)]" },
-  assists: { icon: Handshake, bg: "bg-[#ffb3d6]" },
-  shotsTotal: { icon: Crosshair, bg: "bg-[#cfe0ff]" },
-  shotsOnTarget: { icon: Target, bg: "bg-[#b9f5df]" },
-  keyPasses: { icon: KeyRound, bg: "bg-[var(--lilac)]" },
-  passesAccurate: { icon: Send, bg: "bg-white" },
-  dribblesWon: { icon: Zap, bg: "bg-[var(--yellow)]" },
-  tackles: { icon: Shield, bg: "bg-[#cfe0ff]" },
-  interceptions: { icon: Hand, bg: "bg-[#ffb3d6]" },
-  aerialsWon: { icon: ChevronsUp, bg: "bg-[#b9f5df]" },
-  saves: { icon: Grab, bg: "bg-[var(--lilac)]" },
-  rating: { icon: Star, bg: "bg-white" },
-};
-
-const SOURCE_LABEL: Record<Exclude<LineupSource, "NONE">, { text: string; className: string }> = {
+export const SOURCE_LABEL: Record<Exclude<LineupSource, "NONE">, { text: string; className: string }> = {
   CONFIRMED: { text: "Kesin ilk 11", className: "bg-[#b9f5df]" },
   PREDICTED: { text: "Tahmini ilk 11", className: "bg-[var(--yellow)]" },
   PREVIOUS: { text: "Son maçın ilk 11'i", className: "bg-[#cfe0ff]" },
@@ -35,9 +16,9 @@ const SOURCE_LABEL: Record<Exclude<LineupSource, "NONE">, { text: string; classN
 };
 
 function sourceNote(l: TeamLineup): string | null {
-  if (l.source === "PREDICTED") return "Maç öncesi tahmini kadro; kesinleşince güncellenir.";
+  if (l.source === "PREDICTED") return "Maç öncesi tahmini kadro; kadro açıklanınca kesin ilk 11 ile güncellenir.";
   if (l.source === "PREVIOUS") return `Kadro henüz açıklanmadı; takımın bir önceki maçındaki ilk 11 gösteriliyor: ${l.previousMatch}.`;
-  if (l.source === "ESTIMATED") return `Takımın son ${l.basedOn} maçında en sık ilk 11 başlayan oyunculardan oluşturuldu.`;
+  if (l.source === "ESTIMATED") return `Kadro henüz açıklanmadı; takımın son ${l.basedOn} maçında en sık ilk 11 başlayan oyunculardan oluşturuldu.`;
   if (l.source === "SQUAD") return "Bu takımın maç verisi olmadığı için kadro listesinden oluşturuldu.";
   return null;
 }
@@ -54,28 +35,7 @@ function shortName(name: string): string {
   return words.slice(start).join(" ");
 }
 
-function Badges({ badges, className }: { badges: LeaderBadge[]; className?: string }) {
-  if (!badges.length) return null;
-  return (
-    <span className={cn("flex gap-0.5", className)}>
-      {badges.map((b) => {
-        const { icon: Icon, bg } = LEADER_ICONS[b.key];
-        return (
-          <span
-            key={b.key}
-            title={`Takımın ${b.label.toLocaleLowerCase("tr")} · ${b.value}`}
-            className={cn("flex size-5 items-center justify-center rounded-full border-[1.5px] border-foreground", bg)}
-          >
-            <Icon className="size-3" strokeWidth={2.5} aria-hidden="true" />
-            <span className="sr-only">{b.label}</span>
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
-function PitchPlayer({ p, badges }: { p: LineupPlayer; badges: LeaderBadge[] }) {
+function PitchPlayer({ p }: { p: LineupPlayer }) {
   return (
     <Link href={`/players/${p.id}`} title={p.injury ? `${p.name} · ${p.injury}` : p.name} className="group flex w-[4.6rem] flex-col items-center sm:w-24">
       <span className="relative">
@@ -96,12 +56,11 @@ function PitchPlayer({ p, badges }: { p: LineupPlayer; badges: LeaderBadge[] }) 
       <span className="mt-1 max-w-full truncate rounded-full border-[1.5px] border-foreground bg-white px-1.5 text-[11px] font-bold leading-snug sm:text-xs">
         {shortName(p.name)}
       </span>
-      <Badges badges={badges} className="mt-0.5 flex-wrap justify-center" />
     </Link>
   );
 }
 
-function TeamPitch({ team, lineup, leaders }: { team: { id: number; name: string }; lineup: TeamLineup; leaders: Record<number, LeaderBadge[]> }) {
+function TeamPitch({ team, lineup }: { team: { id: number; name: string }; lineup: TeamLineup }) {
   const header = (
     <div className="flex flex-wrap items-center gap-2.5">
       <TeamLogo id={team.id} name={team.name} size={32} />
@@ -133,6 +92,18 @@ function TeamPitch({ team, lineup, leaders }: { team: { id: number; name: string
     <div className="space-y-3">
       {header}
       {note && <p className="text-sm text-muted-foreground">{note}</p>}
+      {lineup.replaced.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          Tahmin düzeltildi:{" "}
+          {lineup.replaced.map((r, i) => (
+            <span key={r.out}>
+              {i > 0 && ", "}
+              <span className="line-through">{r.out}</span> ({r.reason.toLocaleLowerCase("tr")}) yerine <b className="text-foreground">{r.in}</b>
+            </span>
+          ))}
+          .
+        </p>
+      )}
       {/* Saha: hücum üstte, kaleci altta */}
       <div className="relative overflow-hidden rounded-2xl border-[2.5px] border-foreground bg-[#7ddcb4] shadow-[5px_5px_0_var(--ink)]">
         {/* Çim şeritleri ve çizgiler */}
@@ -147,7 +118,7 @@ function TeamPitch({ team, lineup, leaders }: { team: { id: number; name: string
               row.length > 0 && (
                 <div key={i} className="flex items-start justify-evenly gap-1">
                   {row.map((p) => (
-                    <PitchPlayer key={p.id} p={p} badges={leaders[p.id] ?? []} />
+                    <PitchPlayer key={p.id} p={p} />
                   ))}
                 </div>
               ),
@@ -169,7 +140,26 @@ function TeamPitch({ team, lineup, leaders }: { team: { id: number; name: string
                   <PlayerPhoto id={p.id} name={p.name} size={26} />
                   {shortName(p.name)}
                   {p.position && POSITIONS[p.position] && <span className="text-[10px] font-bold text-muted-foreground">{POSITIONS[p.position]}</span>}
-                  <Badges badges={leaders[p.id] ?? []} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {lineup.missing.length > 0 && (
+        <div>
+          <h4 className="poster mb-2 text-base">Eksikler</h4>
+          <ul className="flex flex-wrap gap-1.5">
+            {lineup.missing.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/players/${p.id}`}
+                  className="flex items-center gap-1.5 rounded-full border-2 border-foreground bg-[#ffd6d6] py-0.5 pl-0.5 pr-2.5 text-sm font-semibold transition-colors hover:bg-[var(--yellow)]"
+                >
+                  <PlayerPhoto id={p.id} name={p.name} size={26} />
+                  {shortName(p.name)}
+                  <span className="text-[11px] font-bold text-muted-foreground">{p.reason}</span>
                 </Link>
               </li>
             ))}
@@ -184,41 +174,20 @@ interface LineupPitchProps {
   home: { id: number; name: string };
   away: { id: number; name: string };
   squads: { home: TeamLineup; away: TeamLineup };
-  leaders: Record<number, LeaderBadge[]>;
 }
 
-export function LineupPitch({ home, away, squads, leaders }: LineupPitchProps) {
-  const shown = new Set(Object.values(leaders).flat().map((b) => b.key));
-  const legend = LEADER_STATS.filter((s) => shown.has(s.key));
+export function LineupPitch({ home, away, squads }: LineupPitchProps) {
   return (
     <Card>
       <CardHeader className="space-y-1">
         <CardTitle className="text-xl">Kadrolar</CardTitle>
         <p className="text-muted-foreground">İlk 11 sahada mevkisine göre dizili; oyuncuya tıklayınca sayfası açılır.</p>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent>
         <div className="grid items-start gap-8 xl:grid-cols-2">
-          <TeamPitch team={home} lineup={squads.home} leaders={leaders} />
-          <TeamPitch team={away} lineup={squads.away} leaders={leaders} />
+          <TeamPitch team={home} lineup={squads.home} />
+          <TeamPitch team={away} lineup={squads.away} />
         </div>
-        {legend.length > 0 && (
-          <div className="rounded-2xl border-2 border-foreground bg-secondary/60 px-4 py-3">
-            <div className="mb-2 text-sm font-bold">Semboller · son 12 ayda takımının lideri</div>
-            <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-              {legend.map((s) => {
-                const { icon: Icon, bg } = LEADER_ICONS[s.key];
-                return (
-                  <li key={s.key} className="flex items-center gap-1.5">
-                    <span className={cn("flex size-5 items-center justify-center rounded-full border-[1.5px] border-foreground", bg)}>
-                      <Icon className="size-3" strokeWidth={2.5} aria-hidden="true" />
-                    </span>
-                    {s.label}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
