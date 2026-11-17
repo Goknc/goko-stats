@@ -1,12 +1,12 @@
 // Maç detayı: iki takımın ilk 11'i sahada mevki mevki, altında yedekler ve maç öncesi eksikler.
 // Başlıktaki etiket kadronun kaynağını söyler: kesin ilk 11, tahmini ilk 11 ya da son maçın ilk 11'i.
 // Her oyuncunun altında seçilen istatistikte son 5/10 maçı kutucuk kutucuk (en soldaki en son maç):
-// eşiğe ulaştıysa yeşil, ulaşamadıysa kırmızı, veri yoksa gri. İstatistik ve eşik takım başına seçilir.
+// eşiğe ulaştıysa yeşil, ulaşamadıysa kırmızı, veri yoksa gri. İstatistik, eşik ve filtreler iki takım için ortak.
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { ChevronDown, Minus, Plus } from "lucide-react";
 import type { LineupPlayer, LineupSource, TeamLineup } from "@/lib/lineup";
 import type { BoardPlayer } from "@/lib/player-board";
 import { pitchRows } from "@/lib/engine/lineup-pick";
@@ -48,31 +48,36 @@ function shortName(name: string): string {
 const cellColor = (hit: boolean | null) =>
   hit === null ? "bg-secondary text-muted-foreground" : hit ? "bg-[var(--hit-block)] text-white" : "bg-[var(--miss-block)] text-white";
 
-// Oyuncunun son maçları: 5'erli satırlar, en soldaki en son maç
-function Squares({ row, size }: { row: BoardRow; size: number }) {
-  if (!row.cells.length) return <span className="mt-1 text-[10px] font-bold text-foreground/60">veri yok</span>;
+const CELL = "size-4 rounded-[4px] text-[10px] sm:size-[18px] sm:text-[11px]";
+
+// Oyuncunun son maçları: 5'erli satırlar, en soldaki en son maç. Verisi az ya da hiç olmayan oyuncuda boş yerler
+// gösterilir; böylece bütün kutular aynı boyda kalır ve saha hizası kaymaz.
+function Squares({ row, size }: { row: BoardRow | null; size: number }) {
+  const cells = row?.cells ?? [];
   return (
-    <span className="mt-1 grid grid-cols-5 gap-0.5 rounded-md border-[1.5px] border-foreground bg-white p-0.5">
-      {row.cells.map((c) => (
+    <span
+      title={cells.length ? undefined : "Bu oyuncunun seçilen maçlarda verisi yok"}
+      className="mt-1 grid grid-cols-5 gap-[2px] rounded-md border-[1.5px] border-foreground bg-white p-[3px]"
+    >
+      {cells.map((c) => (
         <span
           key={c.game.matchId}
-          title={`${formatDate(c.game.date)} · ${c.game.opponentName} ${c.game.score} · ${c.game.minutes} dk${c.game.started ? "" : " (yedekten)"}`}
-          className={cn("flex size-[13px] items-center justify-center rounded-[3px] text-[8px] font-black leading-none tabular-nums sm:size-4 sm:text-[10px]", cellColor(c.hit))}
+          title={`${formatDate(c.game.date)} · ${c.game.isHome ? "ev" : "dep"} · ${c.game.opponentName} ${c.game.score} · ${c.game.minutes} dk${c.game.started ? "" : " (yedekten)"}`}
+          className={cn("flex items-center justify-center font-black leading-none tabular-nums", CELL, cellColor(c.hit))}
         >
           {c.value ?? "–"}
         </span>
       ))}
-      {/* Seçilen sayıdan az maçı varsa boş yerler */}
-      {Array.from({ length: Math.max(0, size - row.cells.length) }, (_, i) => (
-        <span key={`empty-${i}`} aria-hidden="true" className="size-[13px] rounded-[3px] border border-dashed border-foreground/25 sm:size-4" />
+      {Array.from({ length: Math.max(0, size - cells.length) }, (_, i) => (
+        <span key={`empty-${i}`} aria-hidden="true" className={cn("border border-dashed border-foreground/25", CELL)} />
       ))}
     </span>
   );
 }
 
-function PitchPlayer({ p, row, size }: { p: LineupPlayer; row: BoardRow | null; size: number }) {
+function PitchPlayer({ p, row, size }: { p: LineupPlayer; row: BoardRow | null; size: number | null }) {
   return (
-    <Link href={`/players/${p.id}`} title={p.injury ? `${p.name} · ${p.injury}` : p.name} className="group flex w-[4.6rem] flex-col items-center sm:w-24">
+    <Link href={`/players/${p.id}`} title={p.injury ? `${p.name} · ${p.injury}` : p.name} className="group flex w-[5.6rem] flex-col items-center sm:w-[6.75rem]">
       <span className="relative">
         <span className="photocard overflow-hidden border-2 shadow-[2px_2px_0_var(--ink)] transition-transform group-hover:-translate-y-1 group-hover:-rotate-6">
           <PlayerPhoto id={p.id} name={p.name} size={52} className="size-11 sm:size-[52px]" />
@@ -91,16 +96,12 @@ function PitchPlayer({ p, row, size }: { p: LineupPlayer; row: BoardRow | null; 
       <span className="mt-1 max-w-full truncate rounded-full border-[1.5px] border-foreground bg-white px-1.5 text-[11px] font-bold leading-snug sm:text-xs">
         {shortName(p.name)}
       </span>
-      {row && <Squares row={row} size={size} />}
+      {size !== null && <Squares row={row} size={size} />}
     </Link>
   );
 }
 
-interface Shared {
-  size: number;
-  startsOnly: boolean;
-  nationalOnly: boolean;
-}
+type Shared = Omit<BoardFilter, "size"> & { size: number | null }; // size null: oyuncu verisi yok, kutucuk gösterilmez
 
 function TeamPitch({
   team, lineup, board, shared,
@@ -110,14 +111,10 @@ function TeamPitch({
   board: Map<number, BoardPlayer>;
   shared: Shared;
 }) {
-  const [stat, setStat] = useState<BoardStat>("shotsTotal");
-  const [line, setLine] = useState(1);
-  const hasData = board.size > 0;
   const rowOf = (id: number): BoardRow | null => {
     const p = board.get(id);
-    if (!p) return null;
-    const filter: BoardFilter = { stat, line, size: shared.size, venue: "all", nationalOnly: shared.nationalOnly, startsOnly: shared.startsOnly };
-    return boardRow(p.games, filter);
+    if (!p || shared.size === null) return null;
+    return boardRow(p.games, { ...shared, size: shared.size });
   };
 
   const header = (
@@ -151,50 +148,6 @@ function TeamPitch({
     <div className="space-y-3">
       {header}
       {note && <p className="text-sm text-muted-foreground">{note}</p>}
-      {lineup.replaced.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          Tahmin düzeltildi:{" "}
-          {lineup.replaced.map((r, i) => (
-            <span key={r.out}>
-              {i > 0 && ", "}
-              <span className="line-through">{r.out}</span> ({r.reason.toLocaleLowerCase("tr")}) yerine <b className="text-foreground">{r.in}</b>
-            </span>
-          ))}
-          .
-        </p>
-      )}
-
-      {/* Bu takım için istatistik ve eşik */}
-      {hasData && (
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label={`${team.name}: istatistik`}
-            value={stat}
-            onChange={(e) => {
-              const key = e.target.value as BoardStat;
-              setStat(key);
-              setLine(BOARD_STATS.find((s) => s.key === key)!.line);
-            }}
-            className="rounded-full border-2 border-foreground bg-white px-3 py-1 text-sm font-bold shadow-[3px_3px_0_var(--ink)]"
-          >
-            {BOARD_STATS.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <div className="flex items-center rounded-full border-2 border-foreground bg-white p-0.5 shadow-[3px_3px_0_var(--ink)]" aria-label="Eşik">
-            <button type="button" onClick={() => setLine((l) => Math.max(1, l - 1))} aria-label="Eşiği azalt" className="rounded-full p-1 hover:bg-secondary">
-              <Minus className="size-3.5" />
-            </button>
-            <span className="poster min-w-10 text-center tabular-nums">{line}+</span>
-            <button type="button" onClick={() => setLine((l) => l + 1)} aria-label="Eşiği artır" className="rounded-full p-1 hover:bg-secondary">
-              <Plus className="size-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Saha: hücum üstte, kaleci altta */}
       <div className="relative overflow-hidden rounded-2xl border-[2.5px] border-foreground bg-[#7ddcb4] shadow-[5px_5px_0_var(--ink)]">
         {/* Çim şeritleri ve çizgiler */}
@@ -287,37 +240,90 @@ interface LineupPitchProps {
   national: boolean; // milli maç: "yalnızca milli takım" seçimi görünür ve açık başlar
 }
 
+function Pills<T extends string | number>({
+  label, options, value, onChange,
+}: {
+  label: string;
+  options: readonly { key: T; label: string }[];
+  value: T;
+  onChange: (key: T) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex w-fit rounded-full border-2 border-foreground bg-white p-1 text-sm shadow-[3px_3px_0_var(--ink)]">
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          role="radio"
+          aria-checked={value === o.key}
+          onClick={() => onChange(o.key)}
+          className={cn("whitespace-nowrap rounded-full px-3 py-0.5 font-bold", value === o.key ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground")}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function LineupPitch({ home, away, squads, board, national }: LineupPitchProps) {
+  const [stat, setStat] = useState<BoardStat>("shotsTotal");
+  const [line, setLine] = useState(1);
   const [size, setSize] = useState(5);
+  const [venue, setVenue] = useState<BoardFilter["venue"]>("all");
   const [startsOnly, setStartsOnly] = useState(false);
   const [nationalOnly, setNationalOnly] = useState(national);
   const byId = new Map(board.map((p) => [p.id, p]));
-  const shared: Shared = { size, startsOnly, nationalOnly };
+  const hasData = board.length > 0;
+  const shared: Shared = { stat, line, size: hasData ? size : null, venue, startsOnly, nationalOnly };
 
   return (
     <Card>
       <CardHeader className="space-y-3">
         <CardTitle className="text-xl">Kadrolar</CardTitle>
         <p className="text-muted-foreground">
-          İlk 11 sahada mevkisine göre dizili. Her takım için istatistik ve eşik seç; oyuncunun altındaki kutucuklar o istatistikte son
-          maçlarını gösterir (en soldaki en son maç): eşiğe ulaştıysa yeşil, ulaşamadıysa kırmızı.
+          {hasData
+            ? "İlk 11 sahada mevkisine göre dizili. İstatistik ve eşik seç; oyuncunun altındaki kutucuklar o istatistikte son maçlarını gösterir (en soldaki en son maç): eşiğe ulaştıysa yeşil, ulaşamadıysa kırmızı."
+            : "İlk 11 sahada mevkisine göre dizili; oyuncuya tıklayınca sayfası açılır."}
         </p>
-        {board.length > 0 && (
+        {hasData && (
           <div className="flex flex-wrap items-center gap-2">
-            <div role="radiogroup" aria-label="Maç sayısı" className="flex w-fit rounded-full border-2 border-foreground bg-white p-1 text-sm shadow-[3px_3px_0_var(--ink)]">
-              {[5, 10].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  role="radio"
-                  aria-checked={size === n}
-                  onClick={() => setSize(n)}
-                  className={cn("rounded-full px-3 py-0.5 font-bold", size === n ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground")}
-                >
-                  Son {n}
-                </button>
-              ))}
+            {/* İstatistik: yerel select, tema stiliyle */}
+            <label className="relative">
+              <span className="sr-only">İstatistik</span>
+              <select
+                value={stat}
+                onChange={(e) => {
+                  const key = e.target.value as BoardStat;
+                  setStat(key);
+                  setLine(BOARD_STATS.find((s) => s.key === key)!.line);
+                }}
+                className="poster cursor-pointer appearance-none rounded-full border-2 border-foreground bg-[var(--yellow)] py-1 pl-4 pr-10 text-lg leading-tight shadow-[3px_3px_0_var(--ink)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+              >
+                {BOARD_STATS.map((s) => (
+                  <option key={s.key} value={s.key} className="font-sans text-base">
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2" strokeWidth={3} aria-hidden="true" />
+            </label>
+            <div className="flex items-center rounded-full border-2 border-foreground bg-white p-0.5 shadow-[3px_3px_0_var(--ink)]" aria-label="Eşik">
+              <button type="button" onClick={() => setLine((l) => Math.max(1, l - 1))} aria-label="Eşiği azalt" className="rounded-full p-1.5 hover:bg-secondary">
+                <Minus className="size-4" />
+              </button>
+              <span className="poster min-w-12 text-center text-lg tabular-nums">{line}+</span>
+              <button type="button" onClick={() => setLine((l) => l + 1)} aria-label="Eşiği artır" className="rounded-full p-1.5 hover:bg-secondary">
+                <Plus className="size-4" />
+              </button>
             </div>
+            <Pills label="Maç sayısı" options={[{ key: 5, label: "Son 5" }, { key: 10, label: "Son 10" }]} value={size} onChange={setSize} />
+            <Pills
+              label="Saha"
+              options={[{ key: "all", label: "Tümü" }, { key: "home", label: "Evinde" }, { key: "away", label: "Deplasmanda" }] as const}
+              value={venue}
+              onChange={setVenue}
+            />
             <Check checked={startsOnly} onChange={setStartsOnly}>Yalnızca ilk 11</Check>
             {national && <Check checked={nationalOnly} onChange={setNationalOnly}>Yalnızca milli takım</Check>}
           </div>

@@ -32,14 +32,14 @@ function groupOf(m: TeamTrendResult): (typeof GROUPS)[number] {
 
 export function TeamTrendGrid({ trends, home, away }: TeamTrendGridProps) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {GROUPS.map((group) => {
         const items = trends.filter((m) => groupOf(m) === group);
         if (!items.length) return null;
         return (
-          <section key={group} className="space-y-3">
+          <section key={group} className="space-y-4">
             <h3 className="poster text-xl text-foreground">{group}</h3>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
               {items.map((m) => (
                 <div
                   key={m.code}
