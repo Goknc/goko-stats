@@ -104,12 +104,7 @@ npm run test:e2e        # builds the app and runs Playwright against the product
 
 ## How this was built
 
-The implementation was written with an AI coding assistant (Claude). My role was product owner and QA:
-
-- defined the requirements and statistics rules, researched and compared data APIs, and ran the API spike;
-- made the design decisions (sample rules, thresholds, which features to build or drop);
-- wrote and executed the manual test plan, logged and verified the bugs found;
-- set up and debugged the automated test pipeline (e.g. diagnosing Windows file-lock failures and switching E2E runs to a production build).
+Gokostats was developed with support from Claude, an AI coding assistant. I defined the requirements and statistics rules, chose the data source, made the design decisions and tested the app; Claude helped with the implementation.
 
 ## Disclaimer
 

@@ -10,7 +10,7 @@ import { SearchBox } from "@/components/search-box";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
-// K-pop: siyah sahne çubuğu, poster harfli logo, hap sekmeler (seçili sarı ve eğik), altında renkli kayan şerit (ticker)
+// Poster teması: siyah sahne çubuğu, poster harfli logo, hap sekmeler (seçili sarı ve eğik), altında renkli kayan şerit (ticker)
 
 const NAV = [
   { href: "/", label: "Maçlar" },

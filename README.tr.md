@@ -72,6 +72,10 @@ npx vitest run          # analiz motoru birim testleri
 npm run test:e2e        # production build'e karşı Playwright (masaüstü + mobil)
 ```
 
+## Nasıl geliştirildi
+
+Gokostats, yapay zekâ kodlama asistanı Claude'dan destek alınarak geliştirildi. Gereksinimleri ve istatistik kurallarını belirledim, veri kaynağını seçtim, tasarım kararlarını verdim ve uygulamayı test ettim; Claude kodlamada yardımcı oldu.
+
 ## Uyarı
 
 Gokostats, futbol verisine duyulan ilgiyle proje amaçlı geliştirilmiş bağımsız ve ticari olmayan bir çalışmadır. Tüm veriler Bzzoiro Sports Data API'si aracılığıyla otomatik çekilir ve her gün güncellenir; doğruluğu garanti edilmez. İstatistikler geçmiş maçlara dayanır ve yalnızca bilgi amaçlıdır. Sitedeki hiçbir içerik bahis tavsiyesi değildir ve bahse teşvik etmez; sitede bahis bağlantısı, reklamı veya oran bilgisi yoktur. Takım logoları, oyuncu fotoğrafları ve turnuva adları sahiplerine aittir; Gokostats hiçbir kulüp, lig, federasyon veya veri sağlayıcıyla bağlantılı değildir.
