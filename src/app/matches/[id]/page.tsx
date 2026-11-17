@@ -1,6 +1,6 @@
 // src/app/matches/[id]/page.tsx
 // Maç detayı: skor, maç istatistikleri, öne çıkan trendler, skor tahmini, aralarındaki maçlar, takım karneleri,
-// sahaya dizilmiş kadrolar ve oyuncu karneleri.
+// sahaya dizilmiş kadrolar (oyuncu başına son maç kutucukları) ve oyuncu eşik tablosu.
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { analysisOptions, DEFAULT_SAMPLE, sampleFromParams, sampleParams, type SampleSettings } from "@/lib/app-settings";
@@ -17,9 +17,8 @@ import { MatchStrip } from "@/components/match-strip";
 import { StripGroup } from "@/components/strip-group";
 import { RatePercent } from "@/components/rate-percent";
 import { EvidenceTable } from "@/components/evidence-table";
-import { PlayerSection } from "@/components/player-section";
 import { TeamTrendGrid } from "@/components/team-trend-grid";
-import { LineupPitch, SOURCE_LABEL } from "@/components/lineup-pitch";
+import { LineupPitch } from "@/components/lineup-pitch";
 import { TeamAura } from "@/components/team-aura";
 import { LeagueLogo, PlayerPhoto, TeamLogo } from "@/components/entity-image";
 import { H2HCard } from "@/components/h2h-card";
@@ -85,7 +84,6 @@ const SECTIONS = [
   { id: "takimlar", label: "Takımlar" },
   { id: "kadrolar", label: "Kadrolar" },
   { id: "tablo", label: "Oyuncu tablosu" },
-  { id: "oyuncular", label: "Oyuncular" },
 ];
 const POPS = ["var(--purple)", "var(--pink)", "var(--blue)", "var(--yellow)"];
 
@@ -144,10 +142,6 @@ export default async function MatchDetailPage({
     .filter((p) => p.recommended)
     .sort((x, y) => (y.summary.rate ?? 0) - (x.summary.rate ?? 0));
 
-  const teams = [
-    { team: a.homeTeam, source: a.lineups.home },
-    { team: a.awayTeam, source: a.lineups.away },
-  ];
   const hasSquad = a.squads.home.source !== "NONE" || a.squads.away.source !== "NONE";
 
   const kickoff = finished && match ? `${match.homeScore} - ${match.awayScore}` : formatTime(a.eventDate);
@@ -389,7 +383,7 @@ export default async function MatchDetailPage({
       {/* Kadrolar: ilk 11 sahada, yedekler altında */}
       {hasSquad && (
         <section id="kadrolar" className="scroll-mt-36">
-          <LineupPitch home={a.homeTeam} away={a.awayTeam} squads={a.squads} />
+          <LineupPitch home={a.homeTeam} away={a.awayTeam} squads={a.squads} board={board} national={isNationalTeamLeague(a.leagueId)} />
         </section>
       )}
 
@@ -408,32 +402,13 @@ export default async function MatchDetailPage({
         </section>
       )}
 
-      {/* Oyuncu karneleri */}
-      <section id="oyuncular" className="scroll-mt-36">
-        {!a.playerStatsEnabled && (
-          <Card>
-            <CardContent className="py-6 text-center text-muted-foreground">
-              Bu turnuvada oyuncu istatistikleri tutulmuyor; yalnızca takım istatistikleri gösteriliyor.
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Geniş ekranda iki takımın oyuncuları yan yana */}
-        {a.playerStatsEnabled && (
-          <div className="grid items-start gap-9 xl:grid-cols-2">
-            {teams.map(({ team, source }) => (
-              <PlayerSection
-                key={team.id}
-                teamId={team.id}
-                teamName={team.name}
-                lineup={source === "NONE" ? null : SOURCE_LABEL[source]}
-                trends={a.playerTrends.filter((p) => p.teamId === team.id)}
-                players={a.players}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {!a.playerStatsEnabled && (
+        <Card>
+          <CardContent className="py-6 text-center text-muted-foreground">
+            Bu turnuvada oyuncu istatistikleri tutulmuyor; yalnızca takım istatistikleri gösteriliyor.
+          </CardContent>
+        </Card>
+      )}
     </main>
   );
 }
