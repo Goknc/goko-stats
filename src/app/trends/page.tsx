@@ -255,7 +255,7 @@ export default async function RecommendationsPage({
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             {matches.length === 0
-              ? "Bu tarihte takip edilen liglerde maç yok."
+              ? "Bu tarihte takip edilen turnuvalarda maç yok."
               : "Bu tarihte eşiği geçen bir istatistik yok. Başka bir güne ya da daha düşük bir eşiğe bakabilirsin."}
           </CardContent>
         </Card>

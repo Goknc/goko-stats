@@ -11,7 +11,7 @@ test.describe("Maç listesi ve detay", () => {
 
     await expect(page).toHaveURL(/\/matches\/\d+/);
     await expect(page).toHaveTitle(/ · Gokostats$/);
-    await expect(page.getByText("Trendler", { exact: true }).first()).toBeVisible();
+    await expect(page.locator("main").getByText("Trendler", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Takım istatistikleri")).toBeVisible();
     await expect(page.getByRole("link", { name: "← Maç listesi" })).toBeVisible();
   });
@@ -85,7 +85,7 @@ test.describe("Takım, oyuncu ve karşılaştırma", () => {
     await playersTab.click();
     await page.locator('main a[href^="/players/"]').first().click();
     await expect(page).toHaveURL(/\/players\/\d+/);
-    await expect(page.getByText("Öne çıkan özellikler")).toBeVisible();
+    await expect(page.getByText("Öne çıkan özellikler", { exact: true })).toBeVisible();
     await expect(page.getByText("Maç kaydı")).toBeVisible();
   });
 
@@ -94,7 +94,8 @@ test.describe("Takım, oyuncu ve karşılaştırma", () => {
     const player = page.locator('main a[href^="/players/"]').first();
     test.skip((await player.count()) === 0, "oyuncu bulunamadı");
     await player.click();
-    await page.getByRole("link", { name: "Gol", exact: true }).click();
+    await page.getByRole("button", { name: /İstatistik/ }).click();
+    await page.getByRole("dialog").getByRole("link", { name: /^Gol/ }).first().click();
     await expect(page).toHaveURL(/stat=goals/);
   });
 
@@ -107,7 +108,7 @@ test.describe("Takım, oyuncu ve karşılaştırma", () => {
     await expect(page).toHaveURL(/\/compare\?a=\d+&b=\d+/);
     await expect(page.getByText("Maç başına ortalamalar")).toBeVisible();
     await expect(page.getByText("Maç trendleri")).toBeVisible();
-    await page.getByRole("link", { name: "Son 5" }).click();
+    await page.getByRole("link", { name: "Son 5" }).first().click();
     await expect(page).toHaveURL(/last=5/);
   });
 
